@@ -36,6 +36,10 @@ export default function NextDrawCountdown({ currentDrawSol, payerPubkey }: Props
   const drawValue =
     currentDrawSol === null ? "Unavailable" : `${currentDrawSol.toFixed(4)} SOL`;
   const walletUrl = payerPubkey ? `https://solscan.io/account/${payerPubkey}` : null;
+  const brandedPrefix = "JackpotEx";
+  const prefixLen = brandedPrefix.length;
+  const actualPrefix = payerPubkey?.slice(0, prefixLen) ?? "";
+  const hasBrandedPrefix = actualPrefix.toLowerCase() === brandedPrefix.toLowerCase();
 
   return (
     <section className="countdown-card" aria-live="polite">
@@ -51,11 +55,27 @@ export default function NextDrawCountdown({ currentDrawSol, payerPubkey }: Props
         </div>
       </div>
       {walletUrl ? (
-        <p className="countdown-wallet-note">
-          <a href={walletUrl} target="_blank" rel="noreferrer">
-            Check dev wallet to validate balance and transactions
-          </a>
-        </p>
+        <>
+          <p className="countdown-wallet-note">
+            <a href={walletUrl} target="_blank" rel="noreferrer">
+              Click here to check dev wallet
+            </a>{" "}
+            and validate balance + transactions.
+          </p>
+          <div className="deployer-pill">
+            <p className="deployer-label">Deployer Pubkey</p>
+            <p className="deployer-key mono">
+              {hasBrandedPrefix ? (
+                <>
+                  <span className="deployer-prefix">{actualPrefix}</span>
+                  {payerPubkey?.slice(prefixLen)}
+                </>
+              ) : (
+                payerPubkey
+              )}
+            </p>
+          </div>
+        </>
       ) : null}
     </section>
   );

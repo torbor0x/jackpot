@@ -67,7 +67,7 @@ async function runInitialBuyback(): Promise<InitialDraw> {
   const payerAta = await ensureAta(payer.publicKey);
   const alonAta = await ensureAta(ALON_PUBKEY);
 
-  const memo = `Built the thing boss | ${JACKPOT_WEBSITE_URL} | love from Jackpot team`;
+  const memo = `Built the thing boss | ${JACKPOT_WEBSITE_URL} | love from JackpotEx team`;
 
   const tx = new Transaction().add(
     createTransferInstruction(payerAta, alonAta, payer.publicKey, bought),
@@ -104,7 +104,7 @@ async function runRegularDraw(): Promise<RegularDraw> {
 
   const winner = new PublicKey(picked.winner);
   const memo = [
-    "🎲 Jackpot Random Holder Draw",
+    "🎲 JackpotEx Random Holder Draw",
     `Winner: ${winner.toBase58()}`,
     `Prize: ${toSol(PRIZE_LAMPORTS)} SOL`,
     `VRF Request: https://solscan.io/tx/${vrf.requestTx}`,

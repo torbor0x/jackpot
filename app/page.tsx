@@ -56,13 +56,17 @@ export default async function HomePage() {
       <div className="container">
         <header className="hero card">
           <p className="eyebrow">Transparent On-Chain Lottery</p>
-          <p className="theme-signature">JACKPOT // FUTURE PROOF MODE</p>
-          <h1>Jackpot</h1>
+          <p className="theme-signature">JACKPOTEX // FUTURE PROOF MODE</p>
+          <img src="/jackpot.png" alt="JackpotEx" className="hero-brand" />
           <p className="hero-subtitle">Provably Fair Weighted Random Holder Draws</p>
           <p className="hero-note">
             The initial round is a buyback — all tokens purchased go to Alon. Regular draws start hourly
             afterward with SOL prizes to random holders.
           </p>
+          <div className="funded-by">
+            <img src="/pumpfun-logo.png" alt="Pumpfun logo" className="funded-by-logo" />
+            <p>Powered by Pumpfun creator fees</p>
+          </div>
         </header>
 
         {showCountdown ? (

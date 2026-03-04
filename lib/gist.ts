@@ -16,12 +16,12 @@ export async function uploadSnapshotToGist(snapshot: HolderWeight[]): Promise<{
   const token = required("GITHUB_TOKEN");
   const octokit = new Octokit({ auth: token });
 
-  const filename = `jackpot-snapshot-${Date.now()}.json`;
+  const filename = `jackpotex-snapshot-${Date.now()}.json`;
   const content = JSON.stringify(snapshot, null, 2);
 
   const res = await octokit.gists.create({
     public: true,
-    description: "Jackpot holder snapshot for weighted draw verification",
+    description: "JackpotEx holder snapshot for weighted draw verification",
     files: {
       [filename]: { content }
     }

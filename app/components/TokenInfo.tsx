@@ -6,6 +6,7 @@ type Props = {
 };
 
 export default function TokenInfo({ tokenName, tokenMint }: Props) {
+  const displayName = tokenName === "Jackpot" ? "JackpotEx" : tokenName;
   const mint = tokenMint ?? "Not configured";
   const mintLink = tokenMint ? `https://solscan.io/token/${tokenMint}` : null;
 
@@ -15,7 +16,7 @@ export default function TokenInfo({ tokenName, tokenMint }: Props) {
       <div className="token-grid">
         <div className="stat">
           <p className="stat-label">Name</p>
-          <p className="stat-value">{tokenName}</p>
+          <p className="stat-value">{displayName}</p>
         </div>
       </div>
       <div className="ca-box">

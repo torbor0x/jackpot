@@ -1,4 +1,4 @@
-# Jackpot
+# JackpotEx
 
 Provably fair weighted random holder draw website for a specific SPL token.
 
@@ -51,7 +51,7 @@ Provably fair weighted random holder draw website for a specific SPL token.
 - `KV_MODE=remote`: always use Vercel KV (fails if KV env vars are not configured).
 
 Local file storage path:
-- `.local-kv/jackpot-kv.json`
+- `.local-kv/jackpotex-kv.json`
 
 Typical local development:
 - Keep `KV_MODE=auto` or set `KV_MODE=local` in `.env`.

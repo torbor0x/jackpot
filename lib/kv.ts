@@ -3,9 +3,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { DrawRecord } from "@/types";
 
-const DRAWS_KEY = "jackpot-draws";
+const DRAWS_KEY = "jackpotex-draws";
 const INITIAL_DONE_KEY = "initial-round-completed";
-const LOCAL_KV_PATH = path.join(process.cwd(), ".local-kv", "jackpot-kv.json");
+const LOCAL_KV_PATH = path.join(process.cwd(), ".local-kv", "jackpotex-kv.json");
 
 type LocalKvState = {
   [DRAWS_KEY]: DrawRecord[];

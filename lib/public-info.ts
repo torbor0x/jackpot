@@ -9,7 +9,8 @@ type PublicInfo = {
 };
 
 export async function getPublicInfo(): Promise<PublicInfo> {
-  const tokenName = process.env.TOKEN_NAME ?? "Jackpot";
+  const tokenNameRaw = process.env.TOKEN_NAME ?? "JackpotEx";
+  const tokenName = tokenNameRaw === "Jackpot" ? "JackpotEx" : tokenNameRaw;
   const tokenMint = process.env.TOKEN_MINT ?? null;
 
   const endpoint = process.env.MAINNET_ENDPOINT;

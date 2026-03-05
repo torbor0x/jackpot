@@ -2,6 +2,7 @@ import { createJupiterApiClient } from "@jup-ag/api";
 import { NATIVE_MINT, getAccount, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { PublicKey, VersionedTransaction } from "@solana/web3.js";
 import { connection, payer } from "@/lib/solana";
+import { submitVersionedTransaction } from "@/lib/tx";
 
 const jupiter = createJupiterApiClient();
 
@@ -35,11 +36,7 @@ export async function swapAllSolToToken(outputMint: string, amountLamports: numb
   const tx = VersionedTransaction.deserialize(Buffer.from(swapResp.swapTransaction, "base64"));
   tx.sign([payer]);
 
-  const sig = await connection.sendRawTransaction(tx.serialize(), {
-    skipPreflight: false,
-    maxRetries: 3
-  });
-  await connection.confirmTransaction(sig, "confirmed");
+  const sig = await submitVersionedTransaction({ tx, label: "jupiter-swap" });
 
   return { swapTx: sig };
 }

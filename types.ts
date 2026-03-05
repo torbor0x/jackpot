@@ -29,3 +29,19 @@ export type RegularDraw = {
 };
 
 export type DrawRecord = InitialDraw | RegularDraw;
+
+export type BurnStats = {
+  updatedAt: string;
+  totalSupplyRaw: string;
+  currentSupplyRaw: string;
+  burnedBySupplyRaw: string;
+  burnedInDeadWalletsRaw: string;
+  burnedTotalRaw: string;
+  decimals: number;
+  burnedPercent: number;
+  completedBurnTriggers: number;
+  progressToNextTriggerPercent: number;
+  tokensPerTriggerRaw: string;
+  tokensToNextTriggerRaw: string;
+  nextTriggerAtRaw: string;
+};

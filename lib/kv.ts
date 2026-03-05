@@ -1,12 +1,13 @@
 import { kv } from "@vercel/kv";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { DrawRecord, InitialDraw, RegularDraw } from "@/types";
+import type { BurnStats, DrawRecord, InitialDraw, RegularDraw } from "@/types";
 
 const LEGACY_DRAWS_KEY = "jackpotex-draws";
 const REGULAR_DRAWS_KEY = "jackpotex-regular-draws";
 const INITIAL_DRAW_KEY = "jackpotex-initial-draw";
 const INITIAL_DONE_KEY = "initial-round-completed";
+const BURN_STATS_KEY = "jackpotex-burn-stats";
 const LOCAL_KV_PATH = path.join(process.cwd(), ".local-kv", "jackpotex-kv.json");
 
 type LocalKvState = {
@@ -14,6 +15,7 @@ type LocalKvState = {
   [INITIAL_DRAW_KEY]: InitialDraw | null;
   [LEGACY_DRAWS_KEY]?: DrawRecord[];
   [INITIAL_DONE_KEY]: boolean;
+  [BURN_STATS_KEY]?: BurnStats;
 };
 
 const hasRemoteKvEnv =
@@ -163,4 +165,23 @@ export async function addDraw(draw: DrawRecord): Promise<void> {
   const current = await kv.get<RegularDraw[]>(REGULAR_DRAWS_KEY);
   const next = [draw, ...(Array.isArray(current) ? current : [])].slice(0, 9);
   await kv.set(REGULAR_DRAWS_KEY, next);
+}
+
+export async function getBurnStatsCache(): Promise<BurnStats | null> {
+  if (shouldUseLocalKv()) {
+    const state = await readLocalState();
+    return state[BURN_STATS_KEY] ?? null;
+  }
+  const cached = await kv.get<BurnStats>(BURN_STATS_KEY);
+  return cached ?? null;
+}
+
+export async function setBurnStatsCache(stats: BurnStats): Promise<void> {
+  if (shouldUseLocalKv()) {
+    const state = await readLocalState();
+    state[BURN_STATS_KEY] = stats;
+    await writeLocalState(state);
+    return;
+  }
+  await kv.set(BURN_STATS_KEY, stats);
 }

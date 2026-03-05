@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "node:crypto";
 import {
   ALON_PUBKEY,
+  INITIAL_BUYBACK_SWAP_LAMPORTS,
   JACKPOT_WEBSITE_URL,
   PRIZE_LAMPORTS,
   RESERVE_LAMPORTS_FOR_FEES,
@@ -14,13 +16,16 @@ import { addDraw, getInitialDone, setInitialDone } from "@/lib/kv";
 import { getHolderSnapshotByOwner, pickWeightedWinner } from "@/lib/holders";
 import { uploadSnapshotToGist } from "@/lib/gist";
 import { getPayerTokenBalanceRaw, swapAllSolToToken } from "@/lib/swap";
+import { runSplitDistribution } from "@/lib/distribution";
+import { runDeployerTokenBurn } from "@/lib/deployer-burn";
+import { submitLegacyTransaction } from "@/lib/tx";
 import type { InitialDraw, RegularDraw } from "@/types";
 import {
   createAssociatedTokenAccountInstruction,
   createTransferInstruction,
   getAssociatedTokenAddressSync
 } from "@solana/spl-token";
-import { PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { createMemoInstruction } from "@solana/spl-memo";
 
 export const runtime = "nodejs";
@@ -43,16 +48,26 @@ async function ensureAta(owner: PublicKey): Promise<PublicKey> {
     const tx = new Transaction().add(
       createAssociatedTokenAccountInstruction(payer.publicKey, ata, owner, TOKEN_MINT)
     );
-    await sendAndConfirmTransaction(connection, tx, [payer], { commitment: "confirmed" });
+    await submitLegacyTransaction({ tx, signers: [payer], label: "create-ata" });
   }
   return ata;
 }
 
 async function runInitialBuyback(): Promise<InitialDraw> {
   const balance = await connection.getBalance(payer.publicKey, "confirmed");
-  const amountToSwap = balance - RESERVE_LAMPORTS_FOR_FEES;
-  if (amountToSwap <= 0) {
+  const maxSwappable = balance - RESERVE_LAMPORTS_FOR_FEES;
+  if (maxSwappable <= 0) {
     throw new Error("Payer balance is below reserve; cannot run initial buyback");
+  }
+
+  const amountToSwap = INITIAL_BUYBACK_SWAP_LAMPORTS;
+  if (amountToSwap <= 0) {
+    throw new Error("INITIAL_BUYBACK_SWAP_LAMPORTS must be greater than zero");
+  }
+  if (amountToSwap > maxSwappable) {
+    throw new Error(
+      `Configured initial swap (${amountToSwap}) exceeds available swappable balance (${maxSwappable})`
+    );
   }
 
   const before = await getPayerTokenBalanceRaw(TOKEN_MINT.toBase58());
@@ -74,8 +89,10 @@ async function runInitialBuyback(): Promise<InitialDraw> {
     createMemoInstruction(memo, [payer.publicKey])
   );
 
-  const transferTx = await sendAndConfirmTransaction(connection, tx, [payer], {
-    commitment: "confirmed"
+  const transferTx = await submitLegacyTransaction({
+    tx,
+    signers: [payer],
+    label: "initial-transfer"
   });
 
   const draw: InitialDraw = {
@@ -122,8 +139,10 @@ async function runRegularDraw(): Promise<RegularDraw> {
     createMemoInstruction(memo, [payer.publicKey])
   );
 
-  const payoutSig = await sendAndConfirmTransaction(connection, payoutTx, [payer], {
-    commitment: "confirmed"
+  const payoutSig = await submitLegacyTransaction({
+    tx: payoutTx,
+    signers: [payer],
+    label: "regular-payout"
   });
 
   const draw: RegularDraw = {
@@ -151,10 +170,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
-    const initialDone = await getInitialDone();
-    const result = initialDone ? await runRegularDraw() : await runInitialBuyback();
+    const burnResult = await runDeployerTokenBurn();
 
-    return NextResponse.json({ ok: true, result }, { status: 200 });
+    const initialDone = await getInitialDone();
+    let result: unknown;
+
+    if (!initialDone) {
+      result = await runInitialBuyback();
+    } else {
+      const shouldSplit = randomInt(0, 2) === 0;
+      if (shouldSplit) {
+        const distributionTx = await runSplitDistribution();
+        // Intentionally do not log split-distribution cycles into draw history.
+        result = { type: "split-distribution", tx: distributionTx };
+      } else {
+        result = await runRegularDraw();
+      }
+    }
+
+    return NextResponse.json({ ok: true, burn: burnResult, result }, { status: 200 });
   } catch (err) {
     console.error("cron-draw error:", err);
     return NextResponse.json(

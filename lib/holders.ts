@@ -1,4 +1,4 @@
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import type { ParsedAccountData, PublicKey } from "@solana/web3.js";
 import { connection } from "@/lib/solana";
 import type { HolderWeight } from "@/types";
@@ -6,12 +6,19 @@ import type { HolderWeight } from "@/types";
 export const ELIGIBLE_HOLDER_LIMIT = 100;
 
 export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderWeight[]> {
-  const accounts = await connection.getParsedProgramAccounts(TOKEN_PROGRAM_ID, {
-    filters: [
-      { dataSize: 165 },
-      { memcmp: { offset: 0, bytes: mint.toBase58() } }
-    ]
-  });
+  const mintInfo = await connection.getAccountInfo(mint);
+  if (!mintInfo) {
+    throw new Error(`Mint account not found: ${mint.toBase58()}`);
+  }
+
+  const mintProgram = mintInfo.owner.toBase58();
+  const mintMemcmp = { memcmp: { offset: 0, bytes: mint.toBase58() } };
+  const accounts =
+    mintProgram === TOKEN_2022_PROGRAM_ID.toBase58()
+      ? await connection.getParsedProgramAccounts(TOKEN_2022_PROGRAM_ID, { filters: [mintMemcmp] })
+      : await connection.getParsedProgramAccounts(TOKEN_PROGRAM_ID, {
+          filters: [{ dataSize: 165 }, mintMemcmp]
+        });
 
   const byOwner = new Map<string, bigint>();
 

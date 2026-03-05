@@ -136,5 +136,20 @@
     "sentTokensRaw": "1234567890",
     "note": "Initial round complete"
   },
-  "initial-round-completed": true
+  "initial-round-completed": true,
+  "jackpotex-burn-stats": {
+    "updatedAt": "2026-03-05T13:19:44.746Z",
+    "totalSupplyRaw": "1000000000000000",
+    "currentSupplyRaw": "989517382385850",
+    "burnedBySupplyRaw": "10482617614150",
+    "burnedInDeadWalletsRaw": "0",
+    "burnedTotalRaw": "10482617614150",
+    "decimals": 6,
+    "burnedPercent": 1.048261761415,
+    "completedBurnTriggers": 210,
+    "progressToNextTriggerPercent": 65.2352283,
+    "tokensPerTriggerRaw": "50000000000",
+    "tokensToNextTriggerRaw": "17382385850",
+    "nextTriggerAtRaw": "10500000000000"
+  }
 }

@@ -1,11 +1,14 @@
 import bs58 from "bs58";
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { getBurnStats } from "@/lib/burn";
+import type { BurnStats } from "@/types";
 
 type PublicInfo = {
   tokenName: string;
   tokenMint: string | null;
   currentDrawSol: number | null;
   payerPubkey: string | null;
+  burnStats: BurnStats | null;
 };
 
 export async function getPublicInfo(): Promise<PublicInfo> {
@@ -18,19 +21,22 @@ export async function getPublicInfo(): Promise<PublicInfo> {
   const reserve = Number(process.env.RESERVE_LAMPORTS_FOR_FEES ?? "0");
 
   if (!endpoint || !secret) {
-    return { tokenName, tokenMint, currentDrawSol: null, payerPubkey: null };
+    return { tokenName, tokenMint, currentDrawSol: null, payerPubkey: null, burnStats: null };
   }
 
   try {
     const connection = new Connection(endpoint, "confirmed");
     const payer = Keypair.fromSecretKey(bs58.decode(secret));
-    const payerPubkey = new PublicKey(payer.publicKey).toBase58();
-    const balance = await connection.getBalance(new PublicKey(payer.publicKey), "confirmed");
+    const payerPubkey = payer.publicKey.toBase58();
+    const [balance, burnStats] = await Promise.all([
+      connection.getBalance(payer.publicKey, "confirmed"),
+      tokenMint ? getBurnStats(new PublicKey(tokenMint)) : Promise.resolve(null)
+    ]);
     const drawLamports = Math.max(0, balance - reserve);
     const currentDrawSol = drawLamports / LAMPORTS_PER_SOL;
 
-    return { tokenName, tokenMint, currentDrawSol, payerPubkey };
+    return { tokenName, tokenMint, currentDrawSol, payerPubkey, burnStats };
   } catch {
-    return { tokenName, tokenMint, currentDrawSol: null, payerPubkey: null };
+    return { tokenName, tokenMint, currentDrawSol: null, payerPubkey: null, burnStats: null };
   }
 }

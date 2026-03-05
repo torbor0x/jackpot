@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "verify:draw": "tsx scripts/verify-draw.ts"
+    "verify:draw": "tsx scripts/verify-draw.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:live": "RUN_LIVE_INTEGRATION=true vitest run tests/live.integration.test.ts",
+    "snapshot:live": "tsx --tsconfig tsconfig.json scripts/generate-live-snapshot.ts"
   },
   "dependencies": {
     "@jup-ag/api": "^6.0.44",
@@ -28,6 +32,7 @@
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.4"
   }
 }

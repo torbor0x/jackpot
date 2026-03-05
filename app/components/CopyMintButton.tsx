@@ -20,8 +20,8 @@ export default function CopyMintButton({ value }: Props) {
   };
 
   return (
-    <button type="button" className="copy-btn" onClick={onCopy} aria-label="Copy token mint">
-      {copied ? "Copied" : "Copy Mint"}
+    <button type="button" className="copy-btn" onClick={onCopy} aria-label="Copy contract address">
+      {copied ? "Copied" : "Copy CA"}
     </button>
   );
 }

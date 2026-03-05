@@ -16,9 +16,24 @@ export const TOKEN_MINT = new PublicKey(required("TOKEN_MINT"));
 export const ALON_PUBKEY = new PublicKey(required("ALON_PUBKEY"));
 export const TOKEN_NAME = required("TOKEN_NAME");
 export const JACKPOT_WEBSITE_URL = required("JACKPOT_WEBSITE_URL");
+export const TEAM_WALLET_TORBOR = new PublicKey(
+  process.env.TEAM_WALLET_TORBOR ?? "CvMJMaHtGA1acs17bPQbhPxFim97HyLTXaZQHckCToRb"
+);
+export const TEAM_WALLET_PEACHIE = new PublicKey(
+  process.env.TEAM_WALLET_PEACHIE ?? "AJ3uhNTZAQETZPGsxZZit7xPerioZNpuTeRmqGiERie1"
+);
+export const TEAM_WALLET_JESSE = new PublicKey(
+  process.env.TEAM_WALLET_JESSE ?? "7YpRbrJzjykgaEbWMrRrZASdEeieYEyoV3FB2MGvEXbR"
+);
 
 export const PRIZE_LAMPORTS = Number(required("PRIZE_LAMPORTS"));
 export const RESERVE_LAMPORTS_FOR_FEES = Number(required("RESERVE_LAMPORTS_FOR_FEES"));
+export const INITIAL_BUYBACK_SWAP_LAMPORTS = Number(
+  process.env.INITIAL_BUYBACK_SWAP_LAMPORTS ?? "1000000000"
+);
+export const SPLIT_DISTRIBUTION_LAMPORTS = Number(
+  process.env.SPLIT_DISTRIBUTION_LAMPORTS ?? String(PRIZE_LAMPORTS)
+);
 
 export const connection = new Connection(MAINNET_ENDPOINT, "confirmed");
 

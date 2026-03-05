@@ -1,6 +1,7 @@
 import DrawCard from "@/app/components/DrawCard";
 import NextDrawCountdown from "@/app/components/NextDrawCountdown";
 import TokenInfo from "@/app/components/TokenInfo";
+import AlonChatModal from "@/app/components/AlonChatModal";
 import { getDraws, getInitialDone } from "@/lib/kv";
 import { getPublicInfo } from "@/lib/public-info";
 
@@ -56,12 +57,17 @@ export default async function HomePage() {
       <div className="container">
         <header className="hero card">
           <p className="eyebrow">Transparent On-Chain Lottery</p>
-          <p className="theme-signature">JACKPOTEX // FUTURE PROOF MODE</p>
           <img src="/jackpot.png" alt="JackpotEx" className="hero-brand" />
-          <p className="hero-subtitle">Provably Fair Weighted Random Holder Draws</p>
+          <p className="hero-subtitle">Hourly possible draws</p>
           <p className="hero-note">
-            The initial round is a buyback — all tokens purchased go to Alon. Regular draws start hourly
+            The initial round is a buyback — token supply purchased in that round is sent to Alon.
+            Regular draws start hourly
             afterward with SOL prizes to random holders. Only the top 100 holders are eligible per draw.
+          </p>
+          <TokenInfo tokenMint={publicInfo.tokenMint} embedded />
+          <p className="hero-chat-note">
+            This development flow was requested by Alon in internal chats.{" "}
+            <AlonChatModal />
           </p>
           <div className="funded-by">
             <img src="/pumpfun-logo.png" alt="Pumpfun logo" className="funded-by-logo" />
@@ -73,10 +79,9 @@ export default async function HomePage() {
           <NextDrawCountdown
             currentDrawSol={publicInfo.currentDrawSol}
             payerPubkey={publicInfo.payerPubkey}
+            burnStats={publicInfo.burnStats}
           />
         ) : null}
-
-        <TokenInfo tokenName={publicInfo.tokenName} tokenMint={publicInfo.tokenMint} />
 
         <section className="card section-card">
           <h2>How It Works</h2>
@@ -102,7 +107,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <footer>Draws run automatically every hour after initial round. All verifiable on-chain.</footer>
+        <footer>Hourly possible draws after initial round. All verifiable on-chain.</footer>
       </div>
     </main>
   );

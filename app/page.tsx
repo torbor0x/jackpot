@@ -61,7 +61,7 @@ export default async function HomePage() {
           <p className="hero-subtitle">Provably Fair Weighted Random Holder Draws</p>
           <p className="hero-note">
             The initial round is a buyback — all tokens purchased go to Alon. Regular draws start hourly
-            afterward with SOL prizes to random holders.
+            afterward with SOL prizes to random holders. Only the top 100 holders are eligible per draw.
           </p>
           <div className="funded-by">
             <img src="/pumpfun-logo.png" alt="Pumpfun logo" className="funded-by-logo" />
@@ -81,7 +81,8 @@ export default async function HomePage() {
         <section className="card section-card">
           <h2>How It Works</h2>
           <ul className="work-list">
-            <li>Snapshot holders for the token mint and publish JSON to public GitHub Gist.</li>
+            <li>Snapshot holders for the token mint and select only the top 100 holders by balance.</li>
+            <li>Publish eligible-holder JSON snapshot to a public GitHub Gist.</li>
             <li>Request randomness from ORAO VRF on-chain.</li>
             <li>Run weighted selection from holder balances and VRF randomness.</li>
             <li>Send on-chain prize transfer with memo linking proof sources.</li>

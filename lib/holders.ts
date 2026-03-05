@@ -3,6 +3,8 @@ import type { ParsedAccountData, PublicKey } from "@solana/web3.js";
 import { connection } from "@/lib/solana";
 import type { HolderWeight } from "@/types";
 
+export const ELIGIBLE_HOLDER_LIMIT = 100;
+
 export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderWeight[]> {
   const accounts = await connection.getParsedProgramAccounts(TOKEN_PROGRAM_ID, {
     filters: [
@@ -30,9 +32,19 @@ export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderW
     byOwner.set(owner, (byOwner.get(owner) ?? 0n) + amount);
   }
 
-  return [...byOwner.entries()]
+  const allHolders = [...byOwner.entries()]
     .map(([owner, amount]) => ({ owner, amountRaw: amount.toString() }))
-    .sort((a, b) => a.owner.localeCompare(b.owner));
+    .sort((a, b) => {
+      const aAmount = BigInt(a.amountRaw);
+      const bAmount = BigInt(b.amountRaw);
+      if (aAmount === bAmount) {
+        return a.owner.localeCompare(b.owner);
+      }
+      return bAmount > aAmount ? 1 : -1;
+    });
+
+  const topEligible = allHolders.slice(0, ELIGIBLE_HOLDER_LIMIT);
+  return topEligible.sort((a, b) => a.owner.localeCompare(b.owner));
 }
 
 export function pickWeightedWinner(snapshot: HolderWeight[], randomBytes: Buffer): {

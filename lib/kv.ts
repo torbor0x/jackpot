@@ -1,14 +1,18 @@
 import { kv } from "@vercel/kv";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { DrawRecord } from "@/types";
+import type { DrawRecord, InitialDraw, RegularDraw } from "@/types";
 
-const DRAWS_KEY = "jackpotex-draws";
+const LEGACY_DRAWS_KEY = "jackpotex-draws";
+const REGULAR_DRAWS_KEY = "jackpotex-regular-draws";
+const INITIAL_DRAW_KEY = "jackpotex-initial-draw";
 const INITIAL_DONE_KEY = "initial-round-completed";
 const LOCAL_KV_PATH = path.join(process.cwd(), ".local-kv", "jackpotex-kv.json");
 
 type LocalKvState = {
-  [DRAWS_KEY]: DrawRecord[];
+  [REGULAR_DRAWS_KEY]: RegularDraw[];
+  [INITIAL_DRAW_KEY]: InitialDraw | null;
+  [LEGACY_DRAWS_KEY]?: DrawRecord[];
   [INITIAL_DONE_KEY]: boolean;
 };
 
@@ -26,17 +30,64 @@ function shouldUseLocalKv(): boolean {
   return !hasRemoteKvEnv || process.env.NODE_ENV !== "production";
 }
 
+function splitDraws(draws: DrawRecord[]): { initial: InitialDraw | null; regular: RegularDraw[] } {
+  let initial: InitialDraw | null = null;
+  const regular: RegularDraw[] = [];
+
+  for (const d of draws) {
+    if (d.type === "initial") {
+      if (!initial) {
+        initial = d;
+      }
+      continue;
+    }
+    regular.push(d);
+  }
+
+  return { initial, regular };
+}
+
+function combineDraws(initial: InitialDraw | null, regular: RegularDraw[]): DrawRecord[] {
+  const nextRegular = regular.slice(0, initial ? 9 : 10);
+  return initial ? [initial, ...nextRegular] : nextRegular;
+}
+
 async function readLocalState(): Promise<LocalKvState> {
   try {
     const raw = await fs.readFile(LOCAL_KV_PATH, "utf8");
     const parsed = JSON.parse(raw) as Partial<LocalKvState>;
+
+    const initialRaw = parsed[INITIAL_DRAW_KEY];
+    const regularRaw = parsed[REGULAR_DRAWS_KEY];
+    const legacyRaw = parsed[LEGACY_DRAWS_KEY];
+
+    const initial =
+      initialRaw && typeof initialRaw === "object" && initialRaw.type === "initial"
+        ? (initialRaw as InitialDraw)
+        : null;
+    const regular = Array.isArray(regularRaw)
+      ? regularRaw.filter((d): d is RegularDraw => Boolean(d && d.type === "regular"))
+      : [];
+    const legacy = Array.isArray(legacyRaw) ? legacyRaw : [];
+
+    if (!initial && regular.length === 0 && legacy.length > 0) {
+      const migrated = splitDraws(legacy);
+      return {
+        [REGULAR_DRAWS_KEY]: migrated.regular.slice(0, 9),
+        [INITIAL_DRAW_KEY]: migrated.initial,
+        [INITIAL_DONE_KEY]: Boolean(parsed[INITIAL_DONE_KEY])
+      };
+    }
+
     return {
-      [DRAWS_KEY]: Array.isArray(parsed[DRAWS_KEY]) ? parsed[DRAWS_KEY] : [],
+      [REGULAR_DRAWS_KEY]: regular,
+      [INITIAL_DRAW_KEY]: initial,
       [INITIAL_DONE_KEY]: Boolean(parsed[INITIAL_DONE_KEY])
     };
   } catch {
     return {
-      [DRAWS_KEY]: [],
+      [REGULAR_DRAWS_KEY]: [],
+      [INITIAL_DRAW_KEY]: null,
       [INITIAL_DONE_KEY]: false
     };
   }
@@ -69,20 +120,47 @@ export async function setInitialDone(value: boolean): Promise<void> {
 export async function getDraws(): Promise<DrawRecord[]> {
   if (shouldUseLocalKv()) {
     const state = await readLocalState();
-    return state[DRAWS_KEY];
+    return combineDraws(state[INITIAL_DRAW_KEY], state[REGULAR_DRAWS_KEY]);
   }
-  const draws = await kv.get<DrawRecord[]>(DRAWS_KEY);
-  return Array.isArray(draws) ? draws : [];
+  const [initial, regular] = await Promise.all([
+    kv.get<InitialDraw>(INITIAL_DRAW_KEY),
+    kv.get<RegularDraw[]>(REGULAR_DRAWS_KEY)
+  ]);
+
+  const validInitial =
+    initial && typeof initial === "object" && initial.type === "initial" ? initial : null;
+  const validRegular = Array.isArray(regular)
+    ? regular.filter((d): d is RegularDraw => Boolean(d && d.type === "regular"))
+    : [];
+
+  if (validInitial || validRegular.length > 0) {
+    return combineDraws(validInitial, validRegular);
+  }
+
+  const legacy = await kv.get<DrawRecord[]>(LEGACY_DRAWS_KEY);
+  if (!Array.isArray(legacy)) {
+    return [];
+  }
+  const split = splitDraws(legacy);
+  return combineDraws(split.initial, split.regular);
 }
 
 export async function addDraw(draw: DrawRecord): Promise<void> {
   if (shouldUseLocalKv()) {
     const state = await readLocalState();
-    state[DRAWS_KEY] = [draw, ...state[DRAWS_KEY]].slice(0, 10);
+    if (draw.type === "initial") {
+      state[INITIAL_DRAW_KEY] = draw;
+    } else {
+      state[REGULAR_DRAWS_KEY] = [draw, ...state[REGULAR_DRAWS_KEY]].slice(0, 9);
+    }
     await writeLocalState(state);
     return;
   }
-  const current = await getDraws();
-  const next = [draw, ...current].slice(0, 10);
-  await kv.set(DRAWS_KEY, next);
+  if (draw.type === "initial") {
+    await kv.set(INITIAL_DRAW_KEY, draw);
+    return;
+  }
+  const current = await kv.get<RegularDraw[]>(REGULAR_DRAWS_KEY);
+  const next = [draw, ...(Array.isArray(current) ? current : [])].slice(0, 9);
+  await kv.set(REGULAR_DRAWS_KEY, next);
 }

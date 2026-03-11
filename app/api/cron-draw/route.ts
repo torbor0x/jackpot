@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomInt } from "node:crypto";
 import {
-  ALON_PUBKEY,
-  INITIAL_BUYBACK_SWAP_LAMPORTS,
   JACKPOT_WEBSITE_URL,
-  PRIZE_LAMPORTS,
   RESERVE_LAMPORTS_FOR_FEES,
   TOKEN_MINT,
   connection,
@@ -12,19 +9,14 @@ import {
   requestVrfRandomness
 } from "@/lib/solana";
 import { toSol } from "@/lib/format";
-import { addDraw, getInitialDone, setInitialDone } from "@/lib/kv";
+import { addDraw, getBurnTriggerPaid, setBurnTriggerPaid } from "@/lib/kv";
+import { getBurnStats } from "@/lib/burn";
 import { getHolderSnapshotByOwner, pickWeightedWinner } from "@/lib/holders";
 import { uploadSnapshotToGist } from "@/lib/gist";
-import { getPayerTokenBalanceRaw, swapAllSolToToken } from "@/lib/swap";
 import { runSplitDistribution } from "@/lib/distribution";
 import { runDeployerTokenBurn } from "@/lib/deployer-burn";
 import { submitLegacyTransaction } from "@/lib/tx";
-import type { InitialDraw, RegularDraw } from "@/types";
-import {
-  createAssociatedTokenAccountInstruction,
-  createTransferInstruction,
-  getAssociatedTokenAddressSync
-} from "@solana/spl-token";
+import type { RegularDraw } from "@/types";
 import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { createMemoInstruction } from "@solana/spl-memo";
 
@@ -41,76 +33,7 @@ function isAuthorized(req: NextRequest): boolean {
   return (secret && secret === CRON_SECRET) || (manual && manual === MANUAL_TRIGGER_SECRET) || false;
 }
 
-async function ensureAta(owner: PublicKey): Promise<PublicKey> {
-  const ata = getAssociatedTokenAddressSync(TOKEN_MINT, owner);
-  const info = await connection.getAccountInfo(ata);
-  if (!info) {
-    const tx = new Transaction().add(
-      createAssociatedTokenAccountInstruction(payer.publicKey, ata, owner, TOKEN_MINT)
-    );
-    await submitLegacyTransaction({ tx, signers: [payer], label: "create-ata" });
-  }
-  return ata;
-}
-
-async function runInitialBuyback(): Promise<InitialDraw> {
-  const balance = await connection.getBalance(payer.publicKey, "confirmed");
-  const maxSwappable = balance - RESERVE_LAMPORTS_FOR_FEES;
-  if (maxSwappable <= 0) {
-    throw new Error("Payer balance is below reserve; cannot run initial buyback");
-  }
-
-  const amountToSwap = INITIAL_BUYBACK_SWAP_LAMPORTS;
-  if (amountToSwap <= 0) {
-    throw new Error("INITIAL_BUYBACK_SWAP_LAMPORTS must be greater than zero");
-  }
-  if (amountToSwap > maxSwappable) {
-    throw new Error(
-      `Configured initial swap (${amountToSwap}) exceeds available swappable balance (${maxSwappable})`
-    );
-  }
-
-  const before = await getPayerTokenBalanceRaw(TOKEN_MINT.toBase58());
-  const { swapTx } = await swapAllSolToToken(TOKEN_MINT.toBase58(), amountToSwap);
-  const after = await getPayerTokenBalanceRaw(TOKEN_MINT.toBase58());
-
-  const bought = after - before;
-  if (bought <= 0n) {
-    throw new Error("No tokens bought in initial swap");
-  }
-
-  const payerAta = await ensureAta(payer.publicKey);
-  const alonAta = await ensureAta(ALON_PUBKEY);
-
-  const memo = `Built the thing boss | ${JACKPOT_WEBSITE_URL} | love from JackpotEx team`;
-
-  const tx = new Transaction().add(
-    createTransferInstruction(payerAta, alonAta, payer.publicKey, bought),
-    createMemoInstruction(memo, [payer.publicKey])
-  );
-
-  const transferTx = await submitLegacyTransaction({
-    tx,
-    signers: [payer],
-    label: "initial-transfer"
-  });
-
-  const draw: InitialDraw = {
-    type: "initial",
-    timestamp: new Date().toISOString(),
-    swapTx,
-    transferTx,
-    to: ALON_PUBKEY.toBase58(),
-    sentTokensRaw: bought.toString(),
-    note: "Initial round complete"
-  };
-
-  await addDraw(draw);
-  await setInitialDone(true);
-  return draw;
-}
-
-async function runRegularDraw(): Promise<RegularDraw> {
+async function runRegularDraw(payoutLamports: number, burnForced: boolean): Promise<RegularDraw> {
   const slot = await connection.getSlot("confirmed");
 
   const snapshot = await getHolderSnapshotByOwner(TOKEN_MINT);
@@ -123,7 +46,8 @@ async function runRegularDraw(): Promise<RegularDraw> {
   const memo = [
     "🎲 JackpotEx Random Holder Draw",
     `Winner: ${winner.toBase58()}`,
-    `Prize: ${toSol(PRIZE_LAMPORTS)} SOL`,
+    `Prize: ${toSol(payoutLamports)} SOL`,
+    burnForced ? "Burn Trigger: Guaranteed payout" : "Burn Trigger: No",
     `VRF Request: https://solscan.io/tx/${vrf.requestTx}`,
     `VRF Fulfilled: https://solscan.io/tx/${vrf.fulfilledTx}`,
     `Snapshot: ${gist.rawUrl}`,
@@ -134,7 +58,7 @@ async function runRegularDraw(): Promise<RegularDraw> {
     SystemProgram.transfer({
       fromPubkey: payer.publicKey,
       toPubkey: winner,
-      lamports: PRIZE_LAMPORTS
+      lamports: payoutLamports
     }),
     createMemoInstruction(memo, [payer.publicKey])
   );
@@ -150,7 +74,7 @@ async function runRegularDraw(): Promise<RegularDraw> {
     timestamp: new Date().toISOString(),
     slot,
     winner: winner.toBase58(),
-    prizeLamports: PRIZE_LAMPORTS,
+    prizeLamports: payoutLamports,
     payoutTx: payoutSig,
     vrfRequestTx: vrf.requestTx,
     vrfFulfilledTx: vrf.fulfilledTx,
@@ -171,20 +95,29 @@ export async function GET(req: NextRequest) {
     }
 
     const burnResult = await runDeployerTokenBurn();
-
-    const initialDone = await getInitialDone();
+    const burnStats = await getBurnStats(TOKEN_MINT);
+    const lastBurnPaid = await getBurnTriggerPaid();
+    const currentBurnLevel = burnStats?.completedBurnTriggers ?? 0;
+    const burnForced = currentBurnLevel > lastBurnPaid;
     let result: unknown;
 
-    if (!initialDone) {
-      result = await runInitialBuyback();
+    const balance = await connection.getBalance(payer.publicKey, "confirmed");
+    const payoutLamports = balance - RESERVE_LAMPORTS_FOR_FEES;
+    if (payoutLamports <= 0) {
+      throw new Error("Payer balance is below reserve; cannot run payout");
+    }
+
+    if (burnForced) {
+      result = await runRegularDraw(payoutLamports, true);
+      await setBurnTriggerPaid(currentBurnLevel);
     } else {
       const shouldSplit = randomInt(0, 2) === 0;
       if (shouldSplit) {
-        const distributionTx = await runSplitDistribution();
+        const distributionTx = await runSplitDistribution(payoutLamports);
         // Intentionally do not log split-distribution cycles into draw history.
         result = { type: "split-distribution", tx: distributionTx };
       } else {
-        result = await runRegularDraw();
+        result = await runRegularDraw(payoutLamports, false);
       }
     }
 

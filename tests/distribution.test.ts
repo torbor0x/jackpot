@@ -10,7 +10,6 @@ vi.mock("@/lib/solana", () => ({
     simulateTransaction
   },
   payer,
-  SPLIT_DISTRIBUTION_LAMPORTS: 100_000_000,
   TEAM_WALLET_TORBOR: new PublicKey("CvMJMaHtGA1acs17bPQbhPxFim97HyLTXaZQHckCToRb"),
   TEAM_WALLET_PEACHIE: new PublicKey("AJ3uhNTZAQETZPGsxZZit7xPerioZNpuTeRmqGiERie1"),
   TEAM_WALLET_JESSE: new PublicKey("7YpRbrJzjykgaEbWMrRrZASdEeieYEyoV3FB2MGvEXbR")
@@ -30,7 +29,7 @@ describe("split distribution", () => {
     const tx = buildSplitDistributionTransaction(100_000_000);
     expect(tx.instructions).toHaveLength(3);
 
-    const sig = await runSplitDistribution();
+    const sig = await runSplitDistribution(100_000_000);
     expect(sig.startsWith("simulated-split-distribution-")).toBe(true);
     expect(simulateTransaction).toHaveBeenCalled();
   });

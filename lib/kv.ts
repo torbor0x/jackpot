@@ -8,6 +8,7 @@ const REGULAR_DRAWS_KEY = "jackpotex-regular-draws";
 const INITIAL_DRAW_KEY = "jackpotex-initial-draw";
 const INITIAL_DONE_KEY = "initial-round-completed";
 const BURN_STATS_KEY = "jackpotex-burn-stats";
+const BURN_TRIGGER_PAID_KEY = "jackpotex-burn-trigger-paid";
 const LOCAL_KV_PATH = path.join(process.cwd(), ".local-kv", "jackpotex-kv.json");
 
 type LocalKvState = {
@@ -16,6 +17,7 @@ type LocalKvState = {
   [LEGACY_DRAWS_KEY]?: DrawRecord[];
   [INITIAL_DONE_KEY]: boolean;
   [BURN_STATS_KEY]?: BurnStats;
+  [BURN_TRIGGER_PAID_KEY]?: number;
 };
 
 const hasRemoteKvEnv =
@@ -165,6 +167,25 @@ export async function addDraw(draw: DrawRecord): Promise<void> {
   const current = await kv.get<RegularDraw[]>(REGULAR_DRAWS_KEY);
   const next = [draw, ...(Array.isArray(current) ? current : [])].slice(0, 9);
   await kv.set(REGULAR_DRAWS_KEY, next);
+}
+
+export async function getBurnTriggerPaid(): Promise<number> {
+  if (shouldUseLocalKv()) {
+    const state = await readLocalState();
+    return Number(state[BURN_TRIGGER_PAID_KEY] ?? 0);
+  }
+  const v = await kv.get<number>(BURN_TRIGGER_PAID_KEY);
+  return Number(v ?? 0);
+}
+
+export async function setBurnTriggerPaid(value: number): Promise<void> {
+  if (shouldUseLocalKv()) {
+    const state = await readLocalState();
+    state[BURN_TRIGGER_PAID_KEY] = value;
+    await writeLocalState(state);
+    return;
+  }
+  await kv.set(BURN_TRIGGER_PAID_KEY, value);
 }
 
 export async function getBurnStatsCache(): Promise<BurnStats | null> {

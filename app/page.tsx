@@ -107,7 +107,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <footer>Hourly possible draws after initial round. All verifiable on-chain.</footer>
+        <footer>Hourly possible draws. All verifiable on-chain.</footer>
       </div>
     </main>
   );

@@ -15,17 +15,13 @@ Provably fair weighted random holder draw website for a specific SPL token.
 
 - Informational homepage only (no trigger buttons).
 - Shows token/project info and last 10 completed draws.
-- First draw is one-time initial buyback:
-  - Uses payer SOL balance minus `RESERVE_LAMPORTS_FOR_FEES`
-  - Swaps SOL -> target token via Jupiter
-  - Sends all bought tokens to `ALON_PUBKEY` with memo
-- After initial round:
-  - Hourly possible draws from holder snapshot
+ - Draws run immediately with hourly randomized payouts (no initial buyback).
+ - Hourly possible draws from holder snapshot
   - 50/50 branch:
     - Weighted holder draw, or
     - Silent split distribution to team wallets (`Torbor`, `Peachie`, `Jesse`) in a single transaction
   - ORAO VRF randomness
-  - SOL prize transfer with proof memo
+  - SOL prize transfer with proof memo (uses full payer balance minus reserve)
   - Stores draw result in KV
   - Snapshot stored in public Gist for verification
   - Burn tracker refreshed every 30 minutes (cached) for forced-jackpot progress
@@ -75,18 +71,13 @@ Typical Vercel production:
 
 ## Countdown Toggle
 
-- `FORCE_SHOW_COUNTDOWN=true` shows the `Next chance of jackpot` timer even before initial round completes.
-- Set `FORCE_SHOW_COUNTDOWN=false` in production if you only want countdown visible after initial round.
+- `FORCE_SHOW_COUNTDOWN=true` shows the `Next chance of jackpot` timer in all environments.
+- Set `FORCE_SHOW_COUNTDOWN=false` if you want the timer hidden.
 
 ## Transaction Simulation Mode
 
 - `SIMULATE_TRANSACTIONS=true` enables simulation-only mode for on-chain transaction execution paths.
 - In simulation mode, the app simulates transactions and returns simulated signatures instead of broadcasting.
-
-## Initial Buyback Swap Amount
-
-- `INITIAL_BUYBACK_SWAP_LAMPORTS` controls how much SOL is swapped in the one-time initial buyback.
-- The value is capped by available payer balance after reserve: `balance - RESERVE_LAMPORTS_FOR_FEES`.
 
 ## Split Distribution Config
 
@@ -141,3 +132,4 @@ The script re-sorts by owner (same as backend), recomputes weighted selection, a
 - Never expose `PAYER_SECRET_KEY`, `CRON_SECRET`, `MANUAL_TRIGGER_SECRET`, `GITHUB_TOKEN` in client code.
 - API route is protected by secret query params.
 - Keep payer wallet minimally funded and rotate leaked secrets immediately.
+- Set `RESERVE_LAMPORTS_FOR_FEES` to `0.1 SOL` to retain fees.

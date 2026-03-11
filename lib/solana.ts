@@ -13,7 +13,6 @@ const required = (name: string): string => {
 
 export const MAINNET_ENDPOINT = required("MAINNET_ENDPOINT");
 export const TOKEN_MINT = new PublicKey(required("TOKEN_MINT"));
-export const ALON_PUBKEY = new PublicKey(required("ALON_PUBKEY"));
 export const TOKEN_NAME = required("TOKEN_NAME");
 export const JACKPOT_WEBSITE_URL = required("JACKPOT_WEBSITE_URL");
 export const TEAM_WALLET_TORBOR = new PublicKey(
@@ -28,9 +27,6 @@ export const TEAM_WALLET_JESSE = new PublicKey(
 
 export const PRIZE_LAMPORTS = Number(required("PRIZE_LAMPORTS"));
 export const RESERVE_LAMPORTS_FOR_FEES = Number(required("RESERVE_LAMPORTS_FOR_FEES"));
-export const INITIAL_BUYBACK_SWAP_LAMPORTS = Number(
-  process.env.INITIAL_BUYBACK_SWAP_LAMPORTS ?? "1000000000"
-);
 export const SPLIT_DISTRIBUTION_LAMPORTS = Number(
   process.env.SPLIT_DISTRIBUTION_LAMPORTS ?? String(PRIZE_LAMPORTS)
 );

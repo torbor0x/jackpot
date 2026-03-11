@@ -2,24 +2,26 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { Keypair, PublicKey } from "@solana/web3.js";
 
-const mockGetInitialDone = vi.fn();
-const mockSetInitialDone = vi.fn();
 const mockAddDraw = vi.fn();
 const mockGetHolderSnapshotByOwner = vi.fn();
 const mockPickWeightedWinner = vi.fn();
 const mockUploadSnapshotToGist = vi.fn();
-const mockGetPayerTokenBalanceRaw = vi.fn();
-const mockSwapAllSolToToken = vi.fn();
 const mockSubmitLegacyTransaction = vi.fn();
 const mockRequestVrfRandomness = vi.fn();
 const mockRunSplitDistribution = vi.fn();
 const mockRunDeployerTokenBurn = vi.fn();
 const mockRandomInt = vi.fn();
+const mockGetBurnStats = vi.fn();
+const mockGetBurnTriggerPaid = vi.fn();
+const mockSetBurnTriggerPaid = vi.fn();
+const mockGetBalance = vi.fn();
+const mockGetAccountInfo = vi.fn();
+const mockGetSlot = vi.fn();
 
 vi.mock("@/lib/kv", () => ({
-  getInitialDone: mockGetInitialDone,
-  setInitialDone: mockSetInitialDone,
-  addDraw: mockAddDraw
+  addDraw: mockAddDraw,
+  getBurnTriggerPaid: mockGetBurnTriggerPaid,
+  setBurnTriggerPaid: mockSetBurnTriggerPaid
 }));
 
 vi.mock("@/lib/holders", () => ({
@@ -32,8 +34,8 @@ vi.mock("@/lib/gist", () => ({
 }));
 
 vi.mock("@/lib/swap", () => ({
-  getPayerTokenBalanceRaw: mockGetPayerTokenBalanceRaw,
-  swapAllSolToToken: mockSwapAllSolToToken
+  getPayerTokenBalanceRaw: vi.fn(),
+  swapAllSolToToken: vi.fn()
 }));
 
 vi.mock("@/lib/tx", () => ({
@@ -42,6 +44,10 @@ vi.mock("@/lib/tx", () => ({
 
 vi.mock("@/lib/distribution", () => ({
   runSplitDistribution: mockRunSplitDistribution
+}));
+
+vi.mock("@/lib/burn", () => ({
+  getBurnStats: mockGetBurnStats
 }));
 
 vi.mock("@/lib/deployer-burn", () => ({
@@ -53,16 +59,14 @@ vi.mock("node:crypto", () => ({
 }));
 
 vi.mock("@/lib/solana", () => ({
-  ALON_PUBKEY: new PublicKey("11111111111111111111111111111111"),
-  INITIAL_BUYBACK_SWAP_LAMPORTS: 100000000,
   JACKPOT_WEBSITE_URL: "https://jackpot.example",
   PRIZE_LAMPORTS: 100000000,
   RESERVE_LAMPORTS_FOR_FEES: 50000000,
   TOKEN_MINT: new PublicKey("So11111111111111111111111111111111111111112"),
   connection: {
-    getBalance: vi.fn().mockResolvedValue(200000000),
-    getAccountInfo: vi.fn().mockResolvedValue({}) as any,
-    getSlot: vi.fn().mockResolvedValue(123)
+    getBalance: mockGetBalance,
+    getAccountInfo: mockGetAccountInfo as any,
+    getSlot: mockGetSlot
   },
   payer: Keypair.generate(),
   requestVrfRandomness: mockRequestVrfRandomness
@@ -71,25 +75,31 @@ vi.mock("@/lib/solana", () => ({
 describe("cron draw route", () => {
   beforeEach(() => {
     vi.resetModules();
-    mockGetInitialDone.mockReset();
-    mockSetInitialDone.mockReset();
     mockAddDraw.mockReset();
     mockGetHolderSnapshotByOwner.mockReset();
     mockPickWeightedWinner.mockReset();
     mockUploadSnapshotToGist.mockReset();
-    mockGetPayerTokenBalanceRaw.mockReset();
-    mockSwapAllSolToToken.mockReset();
     mockSubmitLegacyTransaction.mockReset();
     mockRequestVrfRandomness.mockReset();
     mockRunSplitDistribution.mockReset();
     mockRunDeployerTokenBurn.mockReset();
     mockRandomInt.mockReset();
+    mockGetBurnStats.mockReset();
+    mockGetBurnTriggerPaid.mockReset();
+    mockSetBurnTriggerPaid.mockReset();
+    mockGetBalance.mockReset();
+    mockGetAccountInfo.mockReset();
+    mockGetSlot.mockReset();
     mockRandomInt.mockReturnValue(1);
     mockRunDeployerTokenBurn.mockResolvedValue(null);
+    mockGetBurnStats.mockResolvedValue({ completedBurnTriggers: 0 });
+    mockGetBurnTriggerPaid.mockResolvedValue(0);
+    mockGetBalance.mockResolvedValue(200000000);
+    mockGetAccountInfo.mockResolvedValue({});
+    mockGetSlot.mockResolvedValue(123);
 
     process.env.CRON_SECRET = "cron-secret";
     process.env.MANUAL_TRIGGER_SECRET = "manual-secret";
-    process.env.INITIAL_BUYBACK_SWAP_LAMPORTS = "100000000";
   });
 
   it("rejects unauthorized requests", async () => {
@@ -102,33 +112,8 @@ describe("cron draw route", () => {
     expect(mockRunDeployerTokenBurn).not.toHaveBeenCalled();
   });
 
-  it("runs initial flow when initial round is not complete", async () => {
-    mockGetInitialDone.mockResolvedValue(false);
-    mockRunDeployerTokenBurn.mockResolvedValue({
-      burnedRaw: "123",
-      tx: "burn-signature"
-    });
-    mockGetPayerTokenBalanceRaw.mockResolvedValueOnce(10n).mockResolvedValueOnce(110n);
-    mockSwapAllSolToToken.mockResolvedValue({ swapTx: "swap-signature" });
-    mockSubmitLegacyTransaction.mockResolvedValue("transfer-signature");
 
-    const { GET } = await import("@/app/api/cron-draw/route");
-    const req = new NextRequest("https://x/api/cron-draw?manual=manual-secret");
-    const res = await GET(req);
-    const body = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(body.ok).toBe(true);
-    expect(body.result.type).toBe("initial");
-    expect(body.burn).toEqual({ burnedRaw: "123", tx: "burn-signature" });
-    expect(mockRunDeployerTokenBurn).toHaveBeenCalledOnce();
-    expect(mockSwapAllSolToToken).toHaveBeenCalledWith(expect.any(String), 100000000);
-    expect(mockSetInitialDone).toHaveBeenCalledWith(true);
-    expect(mockAddDraw).toHaveBeenCalled();
-  });
-
-  it("runs regular flow when initial round is complete", async () => {
-    mockGetInitialDone.mockResolvedValue(true);
+  it("runs regular flow when burn is not forced", async () => {
     mockGetHolderSnapshotByOwner.mockResolvedValue([{ owner: "winner", amountRaw: "100" }]);
     mockUploadSnapshotToGist.mockResolvedValue({
       rawUrl: "https://gist/raw",
@@ -160,10 +145,10 @@ describe("cron draw route", () => {
     expect(mockSubmitLegacyTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ label: "regular-payout" })
     );
+    expect(body.result.prizeLamports).toBe(150000000);
   });
 
   it("runs split distribution and does not log draw when random branch selects split", async () => {
-    mockGetInitialDone.mockResolvedValue(true);
     mockRunSplitDistribution.mockResolvedValue("split-signature");
     mockRandomInt.mockReturnValue(0);
 
@@ -179,7 +164,39 @@ describe("cron draw route", () => {
       result: { type: "split-distribution", tx: "split-signature" }
     });
     expect(mockRunDeployerTokenBurn).toHaveBeenCalledOnce();
-    expect(mockRunSplitDistribution).toHaveBeenCalledOnce();
+    expect(mockRunSplitDistribution).toHaveBeenCalledWith(150000000);
     expect(mockAddDraw).not.toHaveBeenCalled();
+  });
+
+  it("forces holder payout when burn trigger is pending", async () => {
+    mockGetBurnStats.mockResolvedValue({ completedBurnTriggers: 3 });
+    mockGetBurnTriggerPaid.mockResolvedValue(2);
+    mockGetHolderSnapshotByOwner.mockResolvedValue([{ owner: "winner", amountRaw: "100" }]);
+    mockUploadSnapshotToGist.mockResolvedValue({
+      rawUrl: "https://gist/raw",
+      gistUrl: "https://gist/page"
+    });
+    mockRequestVrfRandomness.mockResolvedValue({
+      randomBytes: Buffer.from("01", "hex"),
+      randomHex: "01",
+      requestTx: "vrf-req",
+      fulfilledTx: "vrf-ful"
+    });
+    mockPickWeightedWinner.mockReturnValue({
+      winner: "11111111111111111111111111111111",
+      totalWeight: 100n
+    });
+    mockSubmitLegacyTransaction.mockResolvedValue("payout-signature");
+
+    const { GET } = await import("@/app/api/cron-draw/route");
+    const req = new NextRequest("https://x/api/cron-draw?secret=cron-secret");
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.result.type).toBe("regular");
+    expect(mockRunSplitDistribution).not.toHaveBeenCalled();
+    expect(mockSetBurnTriggerPaid).toHaveBeenCalledWith(3);
   });
 });

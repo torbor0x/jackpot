@@ -1,11 +1,5 @@
 import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
-import {
-  SPLIT_DISTRIBUTION_LAMPORTS,
-  TEAM_WALLET_JESSE,
-  TEAM_WALLET_PEACHIE,
-  TEAM_WALLET_TORBOR,
-  payer
-} from "@/lib/solana";
+import { TEAM_WALLET_JESSE, TEAM_WALLET_PEACHIE, TEAM_WALLET_TORBOR, payer } from "@/lib/solana";
 import { submitLegacyTransaction } from "@/lib/tx";
 
 export const TEAM_WALLETS: PublicKey[] = [TEAM_WALLET_TORBOR, TEAM_WALLET_PEACHIE, TEAM_WALLET_JESSE];
@@ -44,7 +38,7 @@ export function buildSplitDistributionTransaction(totalLamports: number): Transa
   return tx;
 }
 
-export async function runSplitDistribution(): Promise<string> {
-  const tx = buildSplitDistributionTransaction(SPLIT_DISTRIBUTION_LAMPORTS);
+export async function runSplitDistribution(totalLamports: number): Promise<string> {
+  const tx = buildSplitDistributionTransaction(totalLamports);
   return submitLegacyTransaction({ tx, signers: [payer], label: "split-distribution" });
 }

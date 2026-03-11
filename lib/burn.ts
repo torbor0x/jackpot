@@ -1,32 +1,8 @@
 import { Connection, PublicKey, type ParsedAccountData } from "@solana/web3.js";
-import { getBurnStatsCache, setBurnStatsCache } from "@/lib/kv";
 import { formatTokenAmount } from "@/lib/token-format";
 import type { BurnStats } from "@/types";
 
-const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 const FIXED_TOTAL_SUPPLY_TOKENS = 1_000_000_000n;
-
-function normalizeCachedBurnStats(cached: BurnStats | null): BurnStats | null {
-  if (!cached) {
-    return null;
-  }
-  if (cached.nextTriggerAtRaw) {
-    return cached;
-  }
-
-  try {
-    const triggerWindow = computeBurnTriggerWindow(BigInt(cached.burnedTotalRaw), cached.decimals);
-    return {
-      ...cached,
-      nextTriggerAtRaw: triggerWindow.nextTriggerAtRaw.toString(),
-      tokensToNextTriggerRaw: triggerWindow.tokensToNextTriggerRaw.toString(),
-      progressToNextTriggerPercent: triggerWindow.progressToNextTriggerPercent,
-      completedBurnTriggers: triggerWindow.completedBurnTriggers
-    };
-  } catch {
-    return cached;
-  }
-}
 
 function parseMintSupply(value: unknown): { supply: bigint; decimals: number } {
   const data = (value as ParsedAccountData | undefined)?.parsed?.info;
@@ -133,14 +109,6 @@ function buildBurnStats(params: {
 export { formatTokenAmount };
 
 export async function getBurnStats(mint: PublicKey): Promise<BurnStats | null> {
-  const cached = normalizeCachedBurnStats(await getBurnStatsCache());
-  if (cached) {
-    const age = Date.now() - new Date(cached.updatedAt).getTime();
-    if (age >= 0 && age < CACHE_MAX_AGE_MS) {
-      return cached;
-    }
-  }
-
   try {
     const endpoint = process.env.MAINNET_ENDPOINT;
     if (!endpoint) {
@@ -159,10 +127,9 @@ export async function getBurnStats(mint: PublicKey): Promise<BurnStats | null> {
       decimals
     });
 
-    await setBurnStatsCache(stats);
     return stats;
   } catch (err) {
     console.error("burn-stats error:", err);
-    return cached ?? null;
+    return null;
   }
 }

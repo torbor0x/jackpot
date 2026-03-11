@@ -10,3 +10,5 @@ yarn-error.log*
 pnpm-debug.log*
 .vercel
 .env*.local
+.local-kv
+tsconfig.tsbuildinfo

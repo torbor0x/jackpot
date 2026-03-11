@@ -12,21 +12,16 @@ export default function DrawCard({ draw }: { draw: DrawRecord }) {
           <p className="meta">{ts} UTC</p>
         </div>
 
-        <div className="initial-draw-layout">
-          <dl className="draw-data">
-            <div>
-              <dt>Recipient</dt>
-              <dd className="mono">{draw.to}</dd>
-            </div>
-            <div>
-              <dt>Sent Tokens (raw)</dt>
-              <dd>{draw.sentTokensRaw}</dd>
-            </div>
-          </dl>
-          <div className="alon-pfp-ring">
-            <img src="/alon.jpg" alt="Alon profile picture" className="alon-pfp" />
+        <dl className="draw-data">
+          <div>
+            <dt>Recipient</dt>
+            <dd className="mono">{draw.to}</dd>
           </div>
-        </div>
+          <div>
+            <dt>Sent Tokens (raw)</dt>
+            <dd>{draw.sentTokensRaw}</dd>
+          </div>
+        </dl>
 
         <div className="link-row">
           <a href={`https://solscan.io/tx/${draw.swapTx}`} target="_blank" rel="noreferrer">

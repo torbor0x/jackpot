@@ -98,7 +98,8 @@ Typical Vercel production:
 
 - Burn stats are cached in KV/local store and refreshed every 30 minutes.
 - Burned amount is calculated as `1,000,000,000 - current mint supply` (mint-decimal aware).
-- Burn trigger ladder is fixed: first at `10,000`, then every `50,000` tokens (`50k`, `100k`, `150k`, ...).
+- Burn trigger ladder: first at `10,000`, then increments grow by `+50,000` each trigger
+  (`10k`, `60k`, `160k`, `310k`, ...).
 
 ## Deploy On Vercel
 

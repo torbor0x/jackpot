@@ -64,42 +64,37 @@ export function computeBurnTriggerWindow(
   progressToNextTriggerPercent: number;
   nextTriggerAtRaw: bigint;
 } {
-  const firstTriggerRaw = tokensToRaw(10_000n, decimals);
-  const recurringTriggerRaw = tokensToRaw(50_000n, decimals);
+  const firstIncrementRaw = tokensToRaw(10_000n, decimals);
+  const stepIncrementRaw = tokensToRaw(50_000n, decimals);
 
-  if (burnedTotalRaw < firstTriggerRaw) {
-    const progress = firstTriggerRaw === 0n ? 0 : (Number(burnedTotalRaw) / Number(firstTriggerRaw)) * 100;
-    return {
-      completedBurnTriggers: 0,
-      tokensToNextTriggerRaw: firstTriggerRaw - burnedTotalRaw,
-      progressToNextTriggerPercent: progress,
-      nextTriggerAtRaw: firstTriggerRaw
-    };
+  const threshold = (n: bigint): bigint => {
+    if (n <= 0n) {
+      return 0n;
+    }
+    return firstIncrementRaw + (stepIncrementRaw * (n - 1n) * n) / 2n;
+  };
+
+  let completed = 0n;
+  while (true) {
+    const next = completed + 1n;
+    const nextThreshold = threshold(next);
+    if (burnedTotalRaw < nextThreshold) {
+      break;
+    }
+    completed = next;
   }
 
-  if (burnedTotalRaw < recurringTriggerRaw) {
-    const windowSize = recurringTriggerRaw - firstTriggerRaw;
-    const progressed = burnedTotalRaw - firstTriggerRaw;
-    const progress = windowSize === 0n ? 0 : (Number(progressed) / Number(windowSize)) * 100;
-    return {
-      completedBurnTriggers: 1,
-      tokensToNextTriggerRaw: recurringTriggerRaw - burnedTotalRaw,
-      progressToNextTriggerPercent: progress,
-      nextTriggerAtRaw: recurringTriggerRaw
-    };
-  }
-
-  const completedRecurring = burnedTotalRaw / recurringTriggerRaw;
-  const nextRecurring = (completedRecurring + 1n) * recurringTriggerRaw;
-  const progressed = burnedTotalRaw - completedRecurring * recurringTriggerRaw;
-  const progress =
-    recurringTriggerRaw === 0n ? 0 : (Number(progressed) / Number(recurringTriggerRaw)) * 100;
+  const currentThreshold = threshold(completed);
+  const nextThreshold = threshold(completed + 1n);
+  const windowSize = nextThreshold - currentThreshold;
+  const progressed = burnedTotalRaw > currentThreshold ? burnedTotalRaw - currentThreshold : 0n;
+  const progress = windowSize === 0n ? 0 : (Number(progressed) / Number(windowSize)) * 100;
 
   return {
-    completedBurnTriggers: 1 + Number(completedRecurring),
-    tokensToNextTriggerRaw: nextRecurring - burnedTotalRaw,
+    completedBurnTriggers: Number(completed),
+    tokensToNextTriggerRaw: nextThreshold - burnedTotalRaw,
     progressToNextTriggerPercent: progress,
-    nextTriggerAtRaw: nextRecurring
+    nextTriggerAtRaw: nextThreshold
   };
 }
 
@@ -125,7 +120,11 @@ function buildBurnStats(params: {
     burnedPercent,
     completedBurnTriggers: triggerWindow.completedBurnTriggers,
     progressToNextTriggerPercent: triggerWindow.progressToNextTriggerPercent,
-    tokensPerTriggerRaw: tokensToRaw(50_000n, decimals).toString(),
+    tokensPerTriggerRaw:
+      (triggerWindow.completedBurnTriggers === 0
+        ? tokensToRaw(10_000n, decimals)
+        : tokensToRaw(50_000n, decimals) * BigInt(triggerWindow.completedBurnTriggers)
+      ).toString(),
     tokensToNextTriggerRaw: triggerWindow.tokensToNextTriggerRaw.toString(),
     nextTriggerAtRaw: triggerWindow.nextTriggerAtRaw.toString()
   };

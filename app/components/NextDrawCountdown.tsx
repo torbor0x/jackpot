@@ -111,7 +111,8 @@ export default function NextDrawCountdown({ currentDrawSol, payerPubkey, burnSta
           <a href="https://sol-incinerator.com/" target="_blank" rel="noreferrer">
             SOL-Incinerator
           </a>{" "}
-          or send tokens to deployer for burn.
+          or send tokens to deployer for burn. When a burn threshold is hit, the next draw guarantees
+          a jackpot to holders.
         </p>
         <div className="burn-grid">
           <div className="stat">

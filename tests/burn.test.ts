@@ -11,19 +11,19 @@ describe("burn trigger ladder", () => {
 
     const atFirst = computeBurnTriggerWindow(10_000n, decimals);
     expect(atFirst.completedBurnTriggers).toBe(1);
-    expect(atFirst.tokensToNextTriggerRaw).toBe(40_000n);
+    expect(atFirst.tokensToNextTriggerRaw).toBe(50_000n);
 
-    const nearSecond = computeBurnTriggerWindow(49_999n, decimals);
+    const nearSecond = computeBurnTriggerWindow(59_999n, decimals);
     expect(nearSecond.completedBurnTriggers).toBe(1);
     expect(nearSecond.tokensToNextTriggerRaw).toBe(1n);
 
-    const atSecond = computeBurnTriggerWindow(50_000n, decimals);
+    const atSecond = computeBurnTriggerWindow(60_000n, decimals);
     expect(atSecond.completedBurnTriggers).toBe(2);
-    expect(atSecond.tokensToNextTriggerRaw).toBe(50_000n);
+    expect(atSecond.tokensToNextTriggerRaw).toBe(100_000n);
 
-    const atThird = computeBurnTriggerWindow(100_000n, decimals);
+    const atThird = computeBurnTriggerWindow(160_000n, decimals);
     expect(atThird.completedBurnTriggers).toBe(3);
-    expect(atThird.tokensToNextTriggerRaw).toBe(50_000n);
+    expect(atThird.tokensToNextTriggerRaw).toBe(150_000n);
   });
 
   it("derives total burned from fixed 1B supply", () => {

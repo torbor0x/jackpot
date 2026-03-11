@@ -60,9 +60,9 @@ export default async function HomePage() {
           <img src="/jackpot.png" alt="JackpotEx" className="hero-brand" />
           <p className="hero-subtitle">Hourly possible draws</p>
           <p className="hero-note">
-            The initial round is a buyback — token supply purchased in that round is sent to Alon.
-            Regular draws start hourly
-            afterward with SOL prizes to random holders. Only the top 100 holders are eligible per draw.
+            Each hour has a randomized path: creator rewards are split to the team or all accumulated
+            SOL from creator fees that round is sent to a randomly selected top-100 holder. Only the
+            top 100 holders are eligible per draw.
           </p>
           <TokenInfo tokenMint={publicInfo.tokenMint} embedded />
           <p className="hero-chat-note">

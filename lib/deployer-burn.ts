@@ -8,11 +8,18 @@ import {
 import { PublicKey, Transaction } from "@solana/web3.js";
 import { TOKEN_MINT, connection, payer } from "@/lib/solana";
 import { submitLegacyTransaction } from "@/lib/tx";
+import { tokenUiToRaw } from "@/lib/token-amount";
 
 function parseTokenAmountRaw(value: unknown): bigint {
   const data = value as { parsed?: { info?: { tokenAmount?: { amount?: string } } } };
   const amountRaw = data?.parsed?.info?.tokenAmount?.amount ?? "0";
   return BigInt(String(amountRaw));
+}
+
+function parseTokenDecimals(value: unknown): number {
+  const data = value as { parsed?: { info?: { tokenAmount?: { decimals?: number } } } };
+  const decimals = data?.parsed?.info?.tokenAmount?.decimals;
+  return typeof decimals === "number" ? decimals : 0;
 }
 
 export async function runDeployerTokenBurn(): Promise<{ burnedRaw: string; tx: string } | null> {
@@ -35,10 +42,17 @@ export async function runDeployerTokenBurn(): Promise<{ burnedRaw: string; tx: s
   if (amount <= 0n) {
     return null;
   }
+  const decimals = parseTokenDecimals(parsed.value?.data);
+  const reserveUi = Number(process.env.DEPLOYER_TOKEN_RESERVE_UI ?? "0");
+  const reserveRaw = tokenUiToRaw(reserveUi, decimals);
+  const burnAmount = amount > reserveRaw ? amount - reserveRaw : 0n;
+  if (burnAmount <= 0n) {
+    return null;
+  }
 
   const memo = "JackpotEx deployer burn | cron";
   const tx = new Transaction().add(
-    createBurnInstruction(payerAta, TOKEN_MINT, payer.publicKey, amount, [], mintProgram),
+    createBurnInstruction(payerAta, TOKEN_MINT, payer.publicKey, burnAmount, [], mintProgram),
     createMemoInstruction(memo, [payer.publicKey])
   );
 
@@ -48,5 +62,5 @@ export async function runDeployerTokenBurn(): Promise<{ burnedRaw: string; tx: s
     label: "deployer-burn"
   });
 
-  return { burnedRaw: amount.toString(), tx: sig };
+  return { burnedRaw: burnAmount.toString(), tx: sig };
 }

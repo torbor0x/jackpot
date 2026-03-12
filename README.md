@@ -85,6 +85,11 @@ Typical Vercel production:
 - `SPLIT_DISTRIBUTION_LAMPORTS` controls total lamports split evenly across those 3 wallets.
 - Split branch is intentionally not recorded in draw history.
 
+## Deployer Burn Reserve
+
+- `DEPLOYER_TOKEN_RESERVE_UI` keeps this many tokens in the deployer ATA (UI amount, not raw).
+- Any deployer token balance above this reserve is burned on each cron cycle.
+
 ## Burn Tracker Config
 
 - Burned amount is calculated as `1,000,000,000 - current mint supply` (mint-decimal aware).

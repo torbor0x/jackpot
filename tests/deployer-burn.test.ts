@@ -112,4 +112,28 @@ describe("deployer burn", () => {
       expect.objectContaining({ label: "deployer-burn" })
     );
   });
+
+  it("keeps reserve and burns only the excess", async () => {
+    process.env.DEPLOYER_TOKEN_RESERVE_UI = "1.5";
+    mockGetAccountInfo
+      .mockResolvedValueOnce({ owner: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") })
+      .mockResolvedValueOnce({ owner: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
+    mockGetParsedAccountInfo.mockResolvedValue({
+      value: {
+        data: {
+          parsed: {
+            info: {
+              tokenAmount: { amount: "2500000", decimals: 6 }
+            }
+          }
+        }
+      }
+    });
+    mockSubmitLegacyTransaction.mockResolvedValue("simulated-deployer-burn-reserve");
+
+    const { runDeployerTokenBurn } = await import("@/lib/deployer-burn");
+    const result = await runDeployerTokenBurn();
+
+    expect(result).toEqual({ burnedRaw: "1000000", tx: "simulated-deployer-burn-reserve" });
+  });
 });

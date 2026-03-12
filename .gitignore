@@ -12,3 +12,4 @@ pnpm-debug.log*
 .env*.local
 .local-kv
 tsconfig.tsbuildinfo
+.DS_Store

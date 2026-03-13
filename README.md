@@ -118,6 +118,12 @@ Typical Vercel production:
 curl "https://your-domain.com/api/cron-draw?manual=YOUR_MANUAL_TRIGGER_SECRET"
 ```
 
+## Cron Claim (every 15 minutes)
+
+```text
+*/15 * * * * /api/cron-claim?secret=$CRON_SECRET
+```
+
 ## Draw Verification
 
 ### Option A: Verify from draw JSON record

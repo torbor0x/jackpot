@@ -15,7 +15,6 @@ import { getHolderSnapshotByOwner, pickWeightedWinner } from "@/lib/holders";
 import { uploadSnapshotToGist } from "@/lib/gist";
 import { runSplitDistribution } from "@/lib/distribution";
 import { runDeployerTokenBurn } from "@/lib/deployer-burn";
-import { claimCreatorFees } from "@/lib/pumpfun";
 import { submitLegacyTransaction } from "@/lib/tx";
 import type { RegularDraw } from "@/types";
 import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
@@ -107,13 +106,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
-    let claimTx: string | null = null;
-    try {
-      claimTx = await claimCreatorFees();
-    } catch (err) {
-      console.error("pumpfun-claim error:", err);
-    }
-
     const burnResult = await runDeployerTokenBurn();
     const burnStats = await getBurnStats(TOKEN_MINT);
     const lastBurnPaid = await getBurnTriggerPaid();
@@ -151,7 +143,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, claimTx, burn: burnResult, result, debug }, { status: 200 });
+    return NextResponse.json({ ok: true, burn: burnResult, result, debug }, { status: 200 });
   } catch (err) {
     console.error("cron-draw error:", err);
     return NextResponse.json(

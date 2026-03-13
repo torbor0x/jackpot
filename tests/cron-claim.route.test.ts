@@ -1,0 +1,29 @@
+import { describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+
+const mockClaimCreatorFees = vi.fn();
+
+vi.mock("@/lib/pumpfun", () => ({
+  claimCreatorFees: mockClaimCreatorFees
+}));
+
+describe("cron claim route", () => {
+  it("rejects unauthorized requests", async () => {
+    process.env.CRON_SECRET = "cron-secret";
+    const { GET } = await import("@/app/api/cron-claim/route");
+    const req = new NextRequest("https://x/api/cron-claim?secret=bad");
+    const res = await GET(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("claims creator fees when authorized", async () => {
+    process.env.CRON_SECRET = "cron-secret";
+    mockClaimCreatorFees.mockResolvedValue("claim-signature");
+    const { GET } = await import("@/app/api/cron-claim/route");
+    const req = new NextRequest("https://x/api/cron-claim?secret=cron-secret");
+    const res = await GET(req);
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ ok: true, claimTx: "claim-signature" });
+  });
+});

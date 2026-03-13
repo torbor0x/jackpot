@@ -54,7 +54,12 @@ async function runRegularDraw(payoutLamports: number, burnForced: boolean): Prom
   const vrf = await requestVrfRandomness(60_000);
   const picked = pickWeightedWinner(snapshot, vrf.randomBytes);
 
-  const winner = new PublicKey(picked.winner);
+  let winner: PublicKey;
+  try {
+    winner = new PublicKey(picked.winner);
+  } catch {
+    throw new Error(`Invalid winner pubkey: ${picked.winner}`);
+  }
   const memo = [
     "🎲 JackpotEx Random Holder Draw",
     `Winner: ${winner.toBase58()}`,

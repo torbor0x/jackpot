@@ -111,3 +111,22 @@ export async function getCreatorRewardsBalanceLamports(): Promise<bigint> {
   const balance = await sdk.getCreatorVaultBalanceBothPrograms(claimCreatorPublicKey());
   return BigInt(balance.toString());
 }
+
+export async function getMinimumDistributableFeeInfo(
+  mintOverride?: string
+): Promise<{
+  minimumRequiredLamports: string;
+  distributableFeesLamports: string;
+  canDistribute: boolean;
+  isGraduated: boolean;
+}> {
+  const sdk = new OnlinePumpSdk(connection);
+  const mint = new PublicKey(mintOverride ?? claimMint() ?? TOKEN_MINT.toBase58());
+  const res = await sdk.getMinimumDistributableFee(mint);
+  return {
+    minimumRequiredLamports: res.minimumRequired?.toString?.() ?? "0",
+    distributableFeesLamports: res.distributableFees?.toString?.() ?? "0",
+    canDistribute: Boolean((res as any).canDistribute),
+    isGraduated: Boolean((res as any).isGraduated)
+  };
+}

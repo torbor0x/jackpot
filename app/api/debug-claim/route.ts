@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import { OnlinePumpSdk } from "@pump-fun/pump-sdk";
 import { connection, payer } from "@/lib/solana";
-import { getCreatorRewardsBalanceLamports } from "@/lib/pumpfun";
+import { getCreatorRewardsBalanceLamports, getMinimumDistributableFeeInfo } from "@/lib/pumpfun";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
 
     const programIds = instructions.map((ix) => ix.programId.toBase58());
     const vaultBalance = await getCreatorRewardsBalanceLamports();
+    const minFee = await getMinimumDistributableFeeInfo(mint || undefined);
 
     return NextResponse.json(
       {
@@ -58,7 +59,11 @@ export async function GET(req: NextRequest) {
         mode,
         instructionCount: instructions.length,
         programIds,
-        creatorVaultLamports: vaultBalance.toString()
+        creatorVaultLamports: vaultBalance.toString(),
+        minimumRequiredLamports: minFee.minimumRequiredLamports,
+        distributableFeesLamports: minFee.distributableFeesLamports,
+        canDistribute: minFee.canDistribute,
+        isGraduated: minFee.isGraduated
       },
       { status: 200 }
     );

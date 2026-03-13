@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { claimCreatorFees, getCreatorRewardsBalanceLamports } from "@/lib/pumpfun";
+import { claimCreatorFees, getCreatorRewardsBalanceLamports, getMinimumDistributableFeeInfo } from "@/lib/pumpfun";
 import { connection, payer } from "@/lib/solana";
 
 export const runtime = "nodejs";
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     }
 
     const vaultBefore = await getCreatorRewardsBalanceLamports();
+    const minFee = await getMinimumDistributableFeeInfo();
     const before = await connection.getBalance(payer.publicKey, "confirmed");
     const claimTx = await claimCreatorFees();
     const after = await connection.getBalance(payer.publicKey, "confirmed");
@@ -40,7 +41,11 @@ export async function GET(req: NextRequest) {
           beforeLamports: before,
           afterLamports: after,
           vaultBeforeLamports: vaultBefore.toString(),
-          vaultAfterLamports: vaultAfter.toString()
+          vaultAfterLamports: vaultAfter.toString(),
+          minimumRequiredLamports: minFee.minimumRequiredLamports,
+          distributableFeesLamports: minFee.distributableFeesLamports,
+          canDistribute: minFee.canDistribute,
+          isGraduated: minFee.isGraduated
         },
         { status: 200 }
       );
@@ -54,7 +59,11 @@ export async function GET(req: NextRequest) {
         beforeLamports: before,
         afterLamports: after,
         vaultBeforeLamports: vaultBefore.toString(),
-        vaultAfterLamports: vaultAfter.toString()
+        vaultAfterLamports: vaultAfter.toString(),
+        minimumRequiredLamports: minFee.minimumRequiredLamports,
+        distributableFeesLamports: minFee.distributableFeesLamports,
+        canDistribute: minFee.canDistribute,
+        isGraduated: minFee.isGraduated
       },
       { status: 200 }
     );

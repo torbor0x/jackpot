@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 const mockClaimCreatorFees = vi.fn();
 const mockGetBalance = vi.fn();
 const mockGetCreatorRewardsBalanceLamports = vi.fn();
+const mockGetMinimumDistributableFeeInfo = vi.fn();
 
 vi.mock("@/lib/solana", () => ({
   connection: { getBalance: mockGetBalance },
@@ -12,7 +13,8 @@ vi.mock("@/lib/solana", () => ({
 
 vi.mock("@/lib/pumpfun", () => ({
   claimCreatorFees: mockClaimCreatorFees,
-  getCreatorRewardsBalanceLamports: mockGetCreatorRewardsBalanceLamports
+  getCreatorRewardsBalanceLamports: mockGetCreatorRewardsBalanceLamports,
+  getMinimumDistributableFeeInfo: mockGetMinimumDistributableFeeInfo
 }));
 
 describe("cron claim route", () => {
@@ -32,6 +34,12 @@ describe("cron claim route", () => {
     mockGetCreatorRewardsBalanceLamports
       .mockResolvedValueOnce(0n)
       .mockResolvedValueOnce(0n);
+    mockGetMinimumDistributableFeeInfo.mockResolvedValue({
+      minimumRequiredLamports: "0",
+      distributableFeesLamports: "0",
+      canDistribute: false,
+      isGraduated: false
+    });
     mockGetBalance.mockResolvedValueOnce(1000).mockResolvedValueOnce(2000);
     const { GET } = await import("@/app/api/cron-claim/route");
     const req = new NextRequest("https://x/api/cron-claim?secret=cron-secret");
@@ -45,7 +53,11 @@ describe("cron claim route", () => {
       beforeLamports: 1000,
       afterLamports: 2000,
       vaultBeforeLamports: "0",
-      vaultAfterLamports: "0"
+      vaultAfterLamports: "0",
+      minimumRequiredLamports: "0",
+      distributableFeesLamports: "0",
+      canDistribute: false,
+      isGraduated: false
     });
   });
 
@@ -56,6 +68,12 @@ describe("cron claim route", () => {
     mockGetCreatorRewardsBalanceLamports
       .mockResolvedValueOnce(123n)
       .mockResolvedValueOnce(123n);
+    mockGetMinimumDistributableFeeInfo.mockResolvedValue({
+      minimumRequiredLamports: "500",
+      distributableFeesLamports: "100",
+      canDistribute: false,
+      isGraduated: true
+    });
     mockGetBalance.mockResolvedValueOnce(500).mockResolvedValueOnce(500);
     const { GET } = await import("@/app/api/cron-claim/route");
     const req = new NextRequest("https://x/api/cron-claim?manual=manual-secret");
@@ -70,7 +88,11 @@ describe("cron claim route", () => {
       beforeLamports: 500,
       afterLamports: 500,
       vaultBeforeLamports: "123",
-      vaultAfterLamports: "123"
+      vaultAfterLamports: "123",
+      minimumRequiredLamports: "500",
+      distributableFeesLamports: "100",
+      canDistribute: false,
+      isGraduated: true
     });
   });
 });

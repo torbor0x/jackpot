@@ -55,19 +55,6 @@ export default function DrawCard({ draw }: { draw: DrawRecordWithTeam }) {
             </div>
           ) : null}
         </dl>
-        {draw.recipients && draw.recipients.length > 0 ? (
-          <div className="recipient-list">
-            <p className="meta">Recipients</p>
-            {draw.recipients.map((r) => (
-              <div className="recipient-row" key={r.address}>
-                <span className="mono">{r.address}</span>
-                <span>{toSol(r.lamports)} SOL</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="meta">Recipients not available.</p>
-        )}
         <div className="link-row">
           <a href={`https://solscan.io/tx/${draw.tx}`} target="_blank" rel="noreferrer">
             View transaction

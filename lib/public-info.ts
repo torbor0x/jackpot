@@ -18,7 +18,6 @@ export async function getPublicInfo(): Promise<PublicInfo> {
 
   const endpoint = process.env.MAINNET_ENDPOINT;
   const secret = process.env.PAYER_SECRET_KEY;
-  const reserve = Number(process.env.RESERVE_LAMPORTS_FOR_FEES ?? "0");
 
   if (!endpoint || !secret) {
     return { tokenName, tokenMint, currentDrawSol: null, payerPubkey: null, burnStats: null };
@@ -32,8 +31,7 @@ export async function getPublicInfo(): Promise<PublicInfo> {
       connection.getBalance(payer.publicKey, "confirmed"),
       tokenMint ? getBurnStats(new PublicKey(tokenMint)) : Promise.resolve(null)
     ]);
-    const drawLamports = Math.max(0, balance - reserve);
-    const currentDrawSol = drawLamports / LAMPORTS_PER_SOL;
+    const currentDrawSol = balance / LAMPORTS_PER_SOL;
 
     return { tokenName, tokenMint, currentDrawSol, payerPubkey, burnStats };
   } catch {

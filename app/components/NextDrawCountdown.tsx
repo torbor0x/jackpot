@@ -74,7 +74,7 @@ export default function NextDrawCountdown({ currentDrawSol, payerPubkey, burnSta
           <p className="countdown-sub">Hourly possible draws.</p>
         </div>
         <div className="draw-balance-box">
-          <p className="countdown-label">Current Draw Balance</p>
+          <p className="countdown-label">Deployer SOL Balance</p>
           <p className="draw-balance-value">{drawValue}</p>
         </div>
       </div>

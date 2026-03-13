@@ -90,6 +90,10 @@ Typical Vercel production:
 - `PUMPFUN_CLAIM_ENABLED` toggles creator fee claim before each cycle.
 - `PUMPFUN_PRIORITY_FEE_SOL` sets the priority fee for the claim transaction.
 
+## VRF Settings
+
+- `VRF_REQUIRED=true` enforces ORAO VRF; set to `false` to allow fallback randomness if VRF fails.
+
 ## Deployer Burn Reserve
 
 - `DEPLOYER_TOKEN_RESERVE_UI` keeps this many tokens in the deployer ATA (UI amount, not raw).

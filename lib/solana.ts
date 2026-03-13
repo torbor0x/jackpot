@@ -61,45 +61,62 @@ export async function requestVrfRandomness(maxWaitMs = 60_000): Promise<{
   randomHex: string;
   requestTx: string;
   fulfilledTx: string;
+  fallback: boolean;
 }> {
   const seed = crypto.randomBytes(32);
-  const orao: any = new (Orao as any)(connection, payer);
+  try {
+    const orao: any = new (Orao as any)(connection, payer);
 
-  const requestRes = await orao.request(seed);
-  const requestTx = sigFromUnknown(requestRes);
+    const requestRes = await orao.request(seed);
+    const requestTx = sigFromUnknown(requestRes);
 
-  const start = Date.now();
-  let fulfilledTx = requestTx;
-  let randomBytes: Buffer | null = null;
+    const start = Date.now();
+    let fulfilledTx = requestTx;
+    let randomBytes: Buffer | null = null;
 
-  if (typeof orao.waitFulfilled === "function") {
-    const fulfilled = await orao.waitFulfilled(seed, maxWaitMs);
-    fulfilledTx = sigFromUnknown(fulfilled) || fulfilledTx;
-    const r = fulfilled?.randomness ?? fulfilled?.fulfilledRandomness;
-    if (r) {
-      randomBytes = Buffer.from(r);
+    if (typeof orao.waitFulfilled === "function") {
+      const fulfilled = await orao.waitFulfilled(seed, maxWaitMs);
+      fulfilledTx = sigFromUnknown(fulfilled) || fulfilledTx;
+      const r = fulfilled?.randomness ?? fulfilled?.fulfilledRandomness;
+      if (r) {
+        randomBytes = Buffer.from(r);
+      }
     }
-  }
 
-  while (!randomBytes && Date.now() - start < maxWaitMs) {
-    const state = await orao.getRandomness?.(seed);
-    const r = state?.randomness ?? state?.fulfilledRandomness;
-    if (r) {
-      randomBytes = Buffer.from(r);
-      fulfilledTx = sigFromUnknown(state) || fulfilledTx;
-      break;
+    while (!randomBytes && Date.now() - start < maxWaitMs) {
+      const state = await orao.getRandomness?.(seed);
+      const r = state?.randomness ?? state?.fulfilledRandomness;
+      if (r) {
+        randomBytes = Buffer.from(r);
+        fulfilledTx = sigFromUnknown(state) || fulfilledTx;
+        break;
+      }
+      await new Promise((rsv) => setTimeout(rsv, 1500));
     }
-    await new Promise((rsv) => setTimeout(rsv, 1500));
-  }
 
-  if (!randomBytes || randomBytes.length === 0) {
-    throw new Error("ORAO VRF not fulfilled within timeout");
-  }
+    if (!randomBytes || randomBytes.length === 0) {
+      throw new Error("ORAO VRF not fulfilled within timeout");
+    }
 
-  return {
-    randomBytes,
-    randomHex: randomBytes.toString("hex"),
-    requestTx,
-    fulfilledTx
-  };
+    return {
+      randomBytes,
+      randomHex: randomBytes.toString("hex"),
+      requestTx,
+      fulfilledTx,
+      fallback: false
+    };
+  } catch (err) {
+    const allowFallback = (process.env.VRF_REQUIRED ?? "true").toLowerCase() !== "true";
+    if (!allowFallback) {
+      throw err;
+    }
+    const randomBytes = crypto.randomBytes(32);
+    return {
+      randomBytes,
+      randomHex: randomBytes.toString("hex"),
+      requestTx: "",
+      fulfilledTx: "",
+      fallback: true
+    };
+  }
 }

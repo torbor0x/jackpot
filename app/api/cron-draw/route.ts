@@ -71,8 +71,8 @@ async function runRegularDraw(payoutLamports: number, burnForced: boolean): Prom
       `Winner: ${winner.toBase58()}`,
       `Prize: ${toSol(payoutLamports)} SOL`,
       burnForced ? "Burn Trigger: Guaranteed payout" : "Burn Trigger: No",
-      `VRF Request: https://solscan.io/tx/${vrf.requestTx}`,
-      `VRF Fulfilled: https://solscan.io/tx/${vrf.fulfilledTx}`,
+      vrf.fallback ? "VRF: fallback" : `VRF Request: https://solscan.io/tx/${vrf.requestTx}`,
+      vrf.fallback ? "VRF Fulfilled: n/a" : `VRF Fulfilled: https://solscan.io/tx/${vrf.fulfilledTx}`,
       `Snapshot: ${gist.rawUrl}`,
       "Verify: download JSON + re-run weighted selection"
     ].join("\n");

@@ -74,12 +74,16 @@ export default function DrawCard({ draw }: { draw: DrawRecordWithTeam }) {
         <a href={`https://solscan.io/tx/${draw.payoutTx}`} target="_blank" rel="noreferrer">
           Payout Tx
         </a>
-        <a href={`https://solscan.io/tx/${draw.vrfRequestTx}`} target="_blank" rel="noreferrer">
-          VRF Request
-        </a>
-        <a href={`https://solscan.io/tx/${draw.vrfFulfilledTx}`} target="_blank" rel="noreferrer">
-          VRF Fulfilled
-        </a>
+        {draw.vrfRequestTx ? (
+          <a href={`https://solscan.io/tx/${draw.vrfRequestTx}`} target="_blank" rel="noreferrer">
+            VRF Request
+          </a>
+        ) : null}
+        {draw.vrfFulfilledTx ? (
+          <a href={`https://solscan.io/tx/${draw.vrfFulfilledTx}`} target="_blank" rel="noreferrer">
+            VRF Fulfilled
+          </a>
+        ) : null}
         <a href={draw.snapshotRawUrl} target="_blank" rel="noreferrer">
           Snapshot JSON
         </a>

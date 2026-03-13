@@ -77,6 +77,20 @@ export default async function HomePage() {
             <img src="/pumpfun-logo.png" alt="Pumpfun logo" className="funded-by-logo" />
             <p>Powered by Pumpfun creator fees</p>
           </div>
+          <div className="hero-links">
+            <p className="hero-links-label">Community</p>
+            <a
+              className="x-link"
+              href="https://x.com/i/communities/2032059908913295736"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="JackpotEx community on X"
+            >
+              <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+                <path d="M18.9 2.1h3.6l-7.9 9 9.3 12.8h-7.3l-5.7-7.8-7.2 7.8H0l8.4-9.1L-.4 2.1h7.5l5.2 7.1 6.6-7.1zm-1.3 19.2h2L6.4 4.6h-2l13.2 16.7z" />
+              </svg>
+            </a>
+          </div>
         </header>
 
         {showCountdown ? (
@@ -111,7 +125,20 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <footer>Hourly possible draws. All verifiable on-chain.</footer>
+        <footer className="footer-row">
+          <span>Hourly possible draws. All verifiable on-chain.</span>
+          <a
+            className="x-link"
+            href="https://x.com/i/communities/2032059908913295736"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="JackpotEx community on X"
+          >
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+              <path d="M18.9 2.1h3.6l-7.9 9 9.3 12.8h-7.3l-5.7-7.8-7.2 7.8H0l8.4-9.1L-.4 2.1h7.5l5.2 7.1 6.6-7.1zm-1.3 19.2h2L6.4 4.6h-2l13.2 16.7z" />
+            </svg>
+          </a>
+        </footer>
       </div>
     </main>
   );

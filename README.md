@@ -93,6 +93,7 @@ Typical Vercel production:
 - `PUMPFUN_CLAIM_MINT` optionally overrides which mint to claim; defaults to `TOKEN_MINT`.
 - `PUMPFUN_CLAIM_PROVIDER` selects `sdk` (default) or `portal`.
 - `PUMPFUN_CLAIM_MODE` selects `collect` (default) or `distribute` (fee sharing).
+- `PUMPFUN_CREATOR_PUBLIC_KEY` optionally overrides the creator wallet used for claims.
 
 ## VRF Settings
 

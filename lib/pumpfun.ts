@@ -32,6 +32,11 @@ function claimMint(): string | null {
   return mint.length > 0 ? mint : TOKEN_MINT.toBase58();
 }
 
+function claimCreatorPublicKey(): PublicKey {
+  const override = (process.env.PUMPFUN_CREATOR_PUBLIC_KEY ?? "").trim();
+  return override.length > 0 ? new PublicKey(override) : payer.publicKey;
+}
+
 function claimMode(): "collect" | "distribute" {
   const mode = (process.env.PUMPFUN_CLAIM_MODE ?? "collect").toLowerCase();
   return mode === "distribute" ? "distribute" : "collect";
@@ -51,7 +56,8 @@ async function claimViaSdk(): Promise<string> {
     return submitLegacyTransaction({ tx, signers: [payer], label: "pumpfun-distribute" });
   }
 
-  const instructions = await sdk.collectCoinCreatorFeeInstructions(payer.publicKey, payer.publicKey);
+  const creator = claimCreatorPublicKey();
+  const instructions = await sdk.collectCoinCreatorFeeInstructions(creator, payer.publicKey);
   if (!instructions.length) {
     throw new Error("No creator fee instructions returned");
   }
@@ -102,6 +108,6 @@ export async function claimCreatorFees(): Promise<string | null> {
 
 export async function getCreatorRewardsBalanceLamports(): Promise<bigint> {
   const sdk = new OnlinePumpSdk(connection);
-  const balance = await sdk.getCreatorVaultBalanceBothPrograms(payer.publicKey);
+  const balance = await sdk.getCreatorVaultBalanceBothPrograms(claimCreatorPublicKey());
   return BigInt(balance.toString());
 }

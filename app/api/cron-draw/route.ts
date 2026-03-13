@@ -101,11 +101,14 @@ async function runRegularDraw(payoutLamports: number, burnForced: boolean): Prom
 }
 
 export async function GET(req: NextRequest) {
+  let stage = "start";
   try {
+    stage = "auth";
     if (!isAuthorized(req)) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
+    stage = "burn";
     const burnResult = await runDeployerTokenBurn();
     const burnStats = await getBurnStats(TOKEN_MINT);
     const lastBurnPaid = await getBurnTriggerPaid();
@@ -116,6 +119,7 @@ export async function GET(req: NextRequest) {
     let debug: { payer: string; balanceLamports: number; reserveLamports: number; payoutLamports: number } | null =
       null;
 
+    stage = "balance";
     const balance = await connection.getBalance(payer.publicKey, "confirmed");
     const payoutLamports = balance - RESERVE_LAMPORTS_FOR_FEES;
     debug = {
@@ -129,16 +133,20 @@ export async function GET(req: NextRequest) {
     }
 
     if (burnForced) {
+      stage = "burn-forced";
       result = await runRegularDraw(payoutLamports, true);
       await setBurnTriggerPaid(currentBurnLevel);
     } else {
+      stage = "branch";
       const shouldSplit =
         manualOverride === "team" ? true : manualOverride === "holder" ? false : randomInt(0, 2) === 0;
       if (shouldSplit) {
+        stage = "team-distribution";
         const distributionTx = await runSplitDistribution(payoutLamports);
         // Intentionally do not log split-distribution cycles into draw history.
         result = { type: "split-distribution", tx: distributionTx };
       } else {
+        stage = "holder-draw";
         result = await runRegularDraw(payoutLamports, false);
       }
     }
@@ -147,7 +155,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("cron-draw error:", err);
     return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : "unknown_error" },
+      { ok: false, error: err instanceof Error ? err.message : "unknown_error", stage },
       { status: 500 }
     );
   }

@@ -1,5 +1,5 @@
 import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import type { ParsedAccountData, PublicKey } from "@solana/web3.js";
+import { PublicKey, type ParsedAccountData } from "@solana/web3.js";
 import { connection } from "@/lib/solana";
 import type { HolderWeight } from "@/types";
 
@@ -33,6 +33,11 @@ export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderW
     }
 
     const owner = String(info.owner);
+    try {
+      new PublicKey(owner);
+    } catch {
+      continue;
+    }
     if (EXCLUDED_WALLETS.has(owner)) {
       continue;
     }

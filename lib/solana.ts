@@ -28,6 +28,9 @@ export const TEAM_WALLET_JESSE = new PublicKey(
 
 export const PRIZE_LAMPORTS = Number(required("PRIZE_LAMPORTS"));
 export const RESERVE_LAMPORTS_FOR_FEES = Number(required("RESERVE_LAMPORTS_FOR_FEES"));
+export const MIN_DISTRIBUTION_LAMPORTS = Number(
+  process.env.MIN_DISTRIBUTION_LAMPORTS ?? String(0.1 * LAMPORTS_PER_SOL)
+);
 export const SPLIT_DISTRIBUTION_LAMPORTS = Number(
   process.env.SPLIT_DISTRIBUTION_LAMPORTS ?? String(PRIZE_LAMPORTS)
 );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomInt } from "node:crypto";
 import {
   JACKPOT_WEBSITE_URL,
+  MIN_DISTRIBUTION_LAMPORTS,
   RESERVE_LAMPORTS_FOR_FEES,
   TOKEN_MINT,
   connection,
@@ -132,8 +133,15 @@ export async function GET(req: NextRequest) {
     const burnForced = currentBurnLevel > lastBurnPaid;
     const manualOverride = getManualOverride(req);
     let result: unknown;
-    let debug: { payer: string; balanceLamports: number; reserveLamports: number; payoutLamports: number } | null =
-      null;
+    let debug:
+      | {
+          payer: string;
+          balanceLamports: number;
+          reserveLamports: number;
+          payoutLamports: number;
+          minDistributionLamports: number;
+        }
+      | null = null;
 
     stage = "balance";
     const balance = await connection.getBalance(payer.publicKey, "confirmed");
@@ -142,8 +150,12 @@ export async function GET(req: NextRequest) {
       payer: payer.publicKey.toBase58(),
       balanceLamports: balance,
       reserveLamports: RESERVE_LAMPORTS_FOR_FEES,
-      payoutLamports
+      payoutLamports,
+      minDistributionLamports: MIN_DISTRIBUTION_LAMPORTS
     };
+    if (balance < MIN_DISTRIBUTION_LAMPORTS) {
+      throw new Error("Payer balance is below minimum distribution threshold");
+    }
     if (payoutLamports <= 0) {
       throw new Error("Payer balance is below reserve; cannot run payout");
     }

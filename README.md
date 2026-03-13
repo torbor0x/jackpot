@@ -124,6 +124,12 @@ curl "https://your-domain.com/api/cron-draw?manual=YOUR_MANUAL_TRIGGER_SECRET"
 */15 * * * * /api/cron-claim?secret=$CRON_SECRET
 ```
 
+## Manual Claim (dev)
+
+```bash
+curl "https://your-domain.com/api/cron-claim?manual=YOUR_MANUAL_TRIGGER_SECRET"
+```
+
 ## Draw Verification
 
 ### Option A: Verify from draw JSON record

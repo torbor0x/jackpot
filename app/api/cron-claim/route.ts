@@ -6,10 +6,14 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const CRON_SECRET = process.env.CRON_SECRET ?? "";
+const MANUAL_TRIGGER_SECRET = process.env.MANUAL_TRIGGER_SECRET ?? "";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = req.nextUrl.searchParams.get("secret");
-  return Boolean(secret && secret === CRON_SECRET);
+  const manual = req.nextUrl.searchParams.get("manual");
+  return Boolean(
+    (secret && secret === CRON_SECRET) || (manual && manual === MANUAL_TRIGGER_SECRET)
+  );
 }
 
 export async function GET(req: NextRequest) {

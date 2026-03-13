@@ -12,6 +12,11 @@ function priorityFeeSol(): string {
   return process.env.PUMPFUN_PRIORITY_FEE_SOL ?? "0.000001";
 }
 
+function claimPool(): string | null {
+  const pool = (process.env.PUMPFUN_CLAIM_POOL ?? "").trim();
+  return pool.length > 0 ? pool : null;
+}
+
 export async function claimCreatorFees(): Promise<string | null> {
   if (!claimEnabled()) {
     return null;
@@ -23,6 +28,10 @@ export async function claimCreatorFees(): Promise<string | null> {
     mint: TOKEN_MINT.toBase58(),
     priorityFee: priorityFeeSol()
   });
+  const pool = claimPool();
+  if (pool) {
+    body.set("pool", pool);
+  }
 
   const res = await fetch(PUMPFUN_API, {
     method: "POST",

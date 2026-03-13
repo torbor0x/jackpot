@@ -89,6 +89,7 @@ Typical Vercel production:
 
 - `PUMPFUN_CLAIM_ENABLED` toggles creator fee claim before each cycle.
 - `PUMPFUN_PRIORITY_FEE_SOL` sets the priority fee for the claim transaction.
+- `PUMPFUN_CLAIM_POOL` sets the pool for migrated tokens (e.g. `meteora-dbc`).
 
 ## VRF Settings
 

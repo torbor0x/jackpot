@@ -46,63 +46,74 @@ function getManualOverride(req: NextRequest): "team" | "holder" | null {
 }
 
 async function runRegularDraw(payoutLamports: number, burnForced: boolean): Promise<RegularDraw> {
-  const slot = await connection.getSlot("confirmed");
-
-  const snapshot = await getHolderSnapshotByOwner(TOKEN_MINT);
-  const gist = await uploadSnapshotToGist(snapshot);
-
-  const vrf = await requestVrfRandomness(60_000);
-  const picked = pickWeightedWinner(snapshot, vrf.randomBytes);
-
-  let winner: PublicKey;
+  let stage = "slot";
   try {
-    winner = new PublicKey(picked.winner);
-  } catch {
-    throw new Error(`Invalid winner pubkey: ${picked.winner}`);
+    const slot = await connection.getSlot("confirmed");
+
+    stage = "snapshot";
+    const snapshot = await getHolderSnapshotByOwner(TOKEN_MINT);
+    const gist = await uploadSnapshotToGist(snapshot);
+
+    stage = "vrf";
+    const vrf = await requestVrfRandomness(60_000);
+    const picked = pickWeightedWinner(snapshot, vrf.randomBytes);
+
+    stage = "winner";
+    let winner: PublicKey;
+    try {
+      winner = new PublicKey(picked.winner);
+    } catch {
+      throw new Error(`Invalid winner pubkey: ${picked.winner}`);
+    }
+    stage = "memo";
+    const memo = [
+      "🎲 JackpotEx Random Holder Draw",
+      `Winner: ${winner.toBase58()}`,
+      `Prize: ${toSol(payoutLamports)} SOL`,
+      burnForced ? "Burn Trigger: Guaranteed payout" : "Burn Trigger: No",
+      `VRF Request: https://solscan.io/tx/${vrf.requestTx}`,
+      `VRF Fulfilled: https://solscan.io/tx/${vrf.fulfilledTx}`,
+      `Snapshot: ${gist.rawUrl}`,
+      "Verify: download JSON + re-run weighted selection"
+    ].join("\n");
+
+    stage = "payout-tx";
+    const payoutTx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: payer.publicKey,
+        toPubkey: winner,
+        lamports: payoutLamports
+      }),
+      createMemoInstruction(memo, [payer.publicKey])
+    );
+
+    stage = "payout-submit";
+    const payoutSig = await submitLegacyTransaction({
+      tx: payoutTx,
+      signers: [payer],
+      label: "regular-payout"
+    });
+
+    const draw: RegularDraw = {
+      type: "regular",
+      timestamp: new Date().toISOString(),
+      slot,
+      winner: winner.toBase58(),
+      prizeLamports: payoutLamports,
+      payoutTx: payoutSig,
+      vrfRequestTx: vrf.requestTx,
+      vrfFulfilledTx: vrf.fulfilledTx,
+      snapshotRawUrl: gist.rawUrl,
+      snapshotGistUrl: gist.gistUrl,
+      totalWeightRaw: picked.totalWeight.toString(),
+      randomValueHex: vrf.randomHex
+    };
+
+    await addDraw(draw);
+    return draw;
+  } catch (err) {
+    throw new Error(`runRegularDraw:${stage}:${err instanceof Error ? err.message : "unknown"}`);
   }
-  const memo = [
-    "🎲 JackpotEx Random Holder Draw",
-    `Winner: ${winner.toBase58()}`,
-    `Prize: ${toSol(payoutLamports)} SOL`,
-    burnForced ? "Burn Trigger: Guaranteed payout" : "Burn Trigger: No",
-    `VRF Request: https://solscan.io/tx/${vrf.requestTx}`,
-    `VRF Fulfilled: https://solscan.io/tx/${vrf.fulfilledTx}`,
-    `Snapshot: ${gist.rawUrl}`,
-    "Verify: download JSON + re-run weighted selection"
-  ].join("\n");
-
-  const payoutTx = new Transaction().add(
-    SystemProgram.transfer({
-      fromPubkey: payer.publicKey,
-      toPubkey: winner,
-      lamports: payoutLamports
-    }),
-    createMemoInstruction(memo, [payer.publicKey])
-  );
-
-  const payoutSig = await submitLegacyTransaction({
-    tx: payoutTx,
-    signers: [payer],
-    label: "regular-payout"
-  });
-
-  const draw: RegularDraw = {
-    type: "regular",
-    timestamp: new Date().toISOString(),
-    slot,
-    winner: winner.toBase58(),
-    prizeLamports: payoutLamports,
-    payoutTx: payoutSig,
-    vrfRequestTx: vrf.requestTx,
-    vrfFulfilledTx: vrf.fulfilledTx,
-    snapshotRawUrl: gist.rawUrl,
-    snapshotGistUrl: gist.gistUrl,
-    totalWeightRaw: picked.totalWeight.toString(),
-    randomValueHex: vrf.randomHex
-  };
-
-  await addDraw(draw);
-  return draw;
 }
 
 export async function GET(req: NextRequest) {

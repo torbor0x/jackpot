@@ -4,6 +4,7 @@ import TokenInfo from "@/app/components/TokenInfo";
 import AlonChatModal from "@/app/components/AlonChatModal";
 import { getDraws, getInitialDone, getTeamDistribution } from "@/lib/kv";
 import { getPublicInfo } from "@/lib/public-info";
+import type { DrawRecordWithTeam } from "@/types";
 
 export const revalidate = 30;
 
@@ -14,6 +15,12 @@ export default async function HomePage() {
     getPublicInfo(),
     getTeamDistribution()
   ]);
+  const allDraws: DrawRecordWithTeam[] = [...draws];
+  if (teamDistribution) {
+    allDraws.push({ type: "team", ...teamDistribution });
+  }
+  allDraws.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const displayDraws = allDraws.slice(0, 10);
   const forceShowCountdown =
     process.env.FORCE_SHOW_COUNTDOWN === "true" || process.env.NODE_ENV !== "production";
   const showCountdown = initialDone || forceShowCountdown;
@@ -114,36 +121,13 @@ export default async function HomePage() {
         </section>
 
         <section>
-          {teamDistribution ? (
-            <div className="card team-distribution-card">
-              <div className="draw-header-row">
-                <p className="pill">Team Distribution</p>
-                <p className="meta">
-                  {new Date(teamDistribution.timestamp).toLocaleString("en-US", {
-                    timeZone: "UTC"
-                  })}{" "}
-                  UTC
-                </p>
-              </div>
-              <p className="meta">
-                This round routed creator rewards to the team.{" "}
-                <a
-                  href={`https://solscan.io/tx/${teamDistribution.tx}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View transaction
-                </a>
-              </p>
-            </div>
-          ) : null}
           <div className="section-heading">
             <h2>Last 10 Draws</h2>
             <p className="meta">Newest first with full verification links.</p>
           </div>
           <div className="grid draws-grid">
-            {draws.length === 0 ? <div className="card">No draws recorded yet.</div> : null}
-            {draws.map((d, i) => (
+            {displayDraws.length === 0 ? <div className="card">No draws recorded yet.</div> : null}
+            {displayDraws.map((d, i) => (
               <DrawCard key={`${d.timestamp}-${i}`} draw={d} />
             ))}
           </div>

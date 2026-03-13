@@ -51,3 +51,12 @@ export type TeamDistributionRecord = {
   timestamp: string;
   note?: string;
 };
+
+export type TeamDistributionDraw = {
+  type: "team";
+  tx: string;
+  timestamp: string;
+  note?: string;
+};
+
+export type DrawRecordWithTeam = DrawRecord | TeamDistributionDraw;

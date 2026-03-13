@@ -1,7 +1,7 @@
 import { toSol } from "@/lib/format";
-import type { DrawRecord } from "@/types";
+import type { DrawRecordWithTeam } from "@/types";
 
-export default function DrawCard({ draw }: { draw: DrawRecord }) {
+export default function DrawCard({ draw }: { draw: DrawRecordWithTeam }) {
   const ts = new Date(draw.timestamp).toLocaleString("en-US", { timeZone: "UTC" });
 
   if (draw.type === "initial") {
@@ -31,6 +31,23 @@ export default function DrawCard({ draw }: { draw: DrawRecord }) {
             Transfer Tx
           </a>
         </div>
+      </article>
+    );
+  }
+
+  if (draw.type === "team") {
+    return (
+      <article className="card draw-card team-draw">
+        <div className="draw-header-row">
+          <p className="pill">Team Distribution</p>
+          <p className="meta">{ts} UTC</p>
+        </div>
+        <p className="meta">
+          This round routed creator rewards to the team.{" "}
+          <a href={`https://solscan.io/tx/${draw.tx}`} target="_blank" rel="noreferrer">
+            View transaction
+          </a>
+        </p>
       </article>
     );
   }

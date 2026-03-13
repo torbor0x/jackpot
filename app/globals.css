@@ -934,12 +934,6 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.team-distribution-card {
-  margin-bottom: 12px;
-  border-color: rgba(124, 237, 197, 0.34);
-  background: linear-gradient(160deg, rgba(16, 52, 46, 0.82), rgba(9, 30, 40, 0.88));
-}
-
 .draw-card {
   background: linear-gradient(160deg, rgba(13, 35, 56, 0.86), rgba(8, 24, 40, 0.92));
 }
@@ -950,6 +944,11 @@ h2 {
 
 .regular-draw {
   border-color: rgba(121, 194, 255, 0.34);
+}
+
+.team-draw {
+  border-color: rgba(124, 237, 197, 0.34);
+  background: linear-gradient(160deg, rgba(16, 52, 46, 0.82), rgba(9, 30, 40, 0.88));
 }
 
 .draw-header-row {

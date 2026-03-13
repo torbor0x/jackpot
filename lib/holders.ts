@@ -8,6 +8,15 @@ const EXCLUDED_WALLETS = new Set([
   "5Qw2KCbZgzBQhJ5BpVf4RUuM8BizxjsX6TwXzhnK68tN" // liquidity pool
 ]);
 
+function isValidPubkey(value: string): boolean {
+  try {
+    new PublicKey(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderWeight[]> {
   const mintInfo = await connection.getAccountInfo(mint);
   if (!mintInfo) {
@@ -33,9 +42,7 @@ export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderW
     }
 
     const owner = String(info.owner);
-    try {
-      new PublicKey(owner);
-    } catch {
+    if (!isValidPubkey(owner)) {
       continue;
     }
     if (EXCLUDED_WALLETS.has(owner)) {
@@ -69,11 +76,12 @@ export function pickWeightedWinner(snapshot: HolderWeight[], randomBytes: Buffer
   winner: string;
   totalWeight: bigint;
 } {
-  if (snapshot.length === 0) {
+  const validSnapshot = snapshot.filter((h) => isValidPubkey(h.owner));
+  if (validSnapshot.length === 0) {
     throw new Error("No holders found");
   }
 
-  const total = snapshot.reduce((sum, h) => sum + BigInt(h.amountRaw), 0n);
+  const total = validSnapshot.reduce((sum, h) => sum + BigInt(h.amountRaw), 0n);
   if (total <= 0n) {
     throw new Error("Total holder weight is zero");
   }
@@ -81,12 +89,12 @@ export function pickWeightedWinner(snapshot: HolderWeight[], randomBytes: Buffer
   const rnd = BigInt(`0x${randomBytes.toString("hex")}`) % total;
 
   let cursor = 0n;
-  for (const h of snapshot) {
+  for (const h of validSnapshot) {
     cursor += BigInt(h.amountRaw);
     if (rnd < cursor) {
       return { winner: h.owner, totalWeight: total };
     }
   }
 
-  return { winner: snapshot[snapshot.length - 1].owner, totalWeight: total };
+  return { winner: validSnapshot[validSnapshot.length - 1].owner, totalWeight: total };
 }

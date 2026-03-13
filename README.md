@@ -93,6 +93,7 @@ Typical Vercel production:
 ## VRF Settings
 
 - `VRF_REQUIRED=true` enforces ORAO VRF; set to `false` to allow fallback randomness if VRF fails.
+- `MAINNET_WSS_ENDPOINT` should be a WebSocket endpoint for your RPC (required for ORAO VRF fulfillment on providers that don’t support WS on the HTTP URL).
 
 ## Deployer Burn Reserve
 

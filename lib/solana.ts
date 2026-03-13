@@ -12,6 +12,7 @@ const required = (name: string): string => {
 };
 
 export const MAINNET_ENDPOINT = required("MAINNET_ENDPOINT");
+export const MAINNET_WSS_ENDPOINT = process.env.MAINNET_WSS_ENDPOINT ?? "";
 export const TOKEN_MINT = new PublicKey(required("TOKEN_MINT"));
 export const TOKEN_NAME = required("TOKEN_NAME");
 export const JACKPOT_WEBSITE_URL = required("JACKPOT_WEBSITE_URL");
@@ -31,7 +32,10 @@ export const SPLIT_DISTRIBUTION_LAMPORTS = Number(
   process.env.SPLIT_DISTRIBUTION_LAMPORTS ?? String(PRIZE_LAMPORTS)
 );
 
-export const connection = new Connection(MAINNET_ENDPOINT, "confirmed");
+export const connection = new Connection(MAINNET_ENDPOINT, {
+  commitment: "confirmed",
+  wsEndpoint: MAINNET_WSS_ENDPOINT || undefined
+});
 
 const secret = bs58.decode(required("PAYER_SECRET_KEY"));
 export const payer = Keypair.fromSecretKey(secret);

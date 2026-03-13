@@ -100,9 +100,17 @@ export async function GET(req: NextRequest) {
     const currentBurnLevel = burnStats?.completedBurnTriggers ?? 0;
     const burnForced = currentBurnLevel > lastBurnPaid;
     let result: unknown;
+    let debug: { payer: string; balanceLamports: number; reserveLamports: number; payoutLamports: number } | null =
+      null;
 
     const balance = await connection.getBalance(payer.publicKey, "confirmed");
     const payoutLamports = balance - RESERVE_LAMPORTS_FOR_FEES;
+    debug = {
+      payer: payer.publicKey.toBase58(),
+      balanceLamports: balance,
+      reserveLamports: RESERVE_LAMPORTS_FOR_FEES,
+      payoutLamports
+    };
     if (payoutLamports <= 0) {
       throw new Error("Payer balance is below reserve; cannot run payout");
     }
@@ -121,7 +129,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, burn: burnResult, result }, { status: 200 });
+    return NextResponse.json({ ok: true, burn: burnResult, result, debug }, { status: 200 });
   } catch (err) {
     console.error("cron-draw error:", err);
     return NextResponse.json(

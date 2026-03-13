@@ -5,9 +5,10 @@ const mockClaimCreatorFees = vi.fn();
 const mockGetBalance = vi.fn();
 const mockGetCreatorRewardsBalanceLamports = vi.fn();
 const mockGetMinimumDistributableFeeInfo = vi.fn();
+const mockGetTokenAccountBalance = vi.fn();
 
 vi.mock("@/lib/solana", () => ({
-  connection: { getBalance: mockGetBalance },
+  connection: { getBalance: mockGetBalance, getTokenAccountBalance: mockGetTokenAccountBalance },
   payer: { publicKey: { toBase58: () => "payer" } }
 }));
 
@@ -40,6 +41,8 @@ describe("cron claim route", () => {
       canDistribute: false,
       isGraduated: false
     });
+    mockGetTokenAccountBalance.mockResolvedValueOnce({ value: { amount: "0" } });
+    mockGetTokenAccountBalance.mockResolvedValueOnce({ value: { amount: "0" } });
     mockGetBalance.mockResolvedValueOnce(1000).mockResolvedValueOnce(2000);
     const { GET } = await import("@/app/api/cron-claim/route");
     const req = new NextRequest("https://x/api/cron-claim?secret=cron-secret");
@@ -50,8 +53,11 @@ describe("cron claim route", () => {
       ok: true,
       claimTx: "claim-signature",
       claimedLamports: 1000,
+      claimedWsolLamports: "0",
       beforeLamports: 1000,
       afterLamports: 2000,
+      wsolBeforeLamports: "0",
+      wsolAfterLamports: "0",
       vaultBeforeLamports: "0",
       vaultAfterLamports: "0",
       minimumRequiredLamports: "0",
@@ -74,6 +80,8 @@ describe("cron claim route", () => {
       canDistribute: false,
       isGraduated: true
     });
+    mockGetTokenAccountBalance.mockResolvedValueOnce({ value: { amount: "500" } });
+    mockGetTokenAccountBalance.mockResolvedValueOnce({ value: { amount: "500" } });
     mockGetBalance.mockResolvedValueOnce(500).mockResolvedValueOnce(500);
     const { GET } = await import("@/app/api/cron-claim/route");
     const req = new NextRequest("https://x/api/cron-claim?manual=manual-secret");
@@ -85,8 +93,11 @@ describe("cron claim route", () => {
       error: "No creator rewards claimed; check pool/mint or reward distribution wallet",
       claimTx: "claim-signature",
       claimedLamports: 0,
+      claimedWsolLamports: "0",
       beforeLamports: 500,
       afterLamports: 500,
+      wsolBeforeLamports: "500",
+      wsolAfterLamports: "500",
       vaultBeforeLamports: "123",
       vaultAfterLamports: "123",
       minimumRequiredLamports: "500",

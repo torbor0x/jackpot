@@ -33,6 +33,18 @@ function isAuthorized(req: NextRequest): boolean {
   return (secret && secret === CRON_SECRET) || (manual && manual === MANUAL_TRIGGER_SECRET) || false;
 }
 
+function getManualOverride(req: NextRequest): "team" | "holder" | null {
+  const manual = req.nextUrl.searchParams.get("manual");
+  if (!manual || manual !== MANUAL_TRIGGER_SECRET) {
+    return null;
+  }
+  const mode = req.nextUrl.searchParams.get("mode");
+  if (mode === "team" || mode === "holder") {
+    return mode;
+  }
+  return null;
+}
+
 async function runRegularDraw(payoutLamports: number, burnForced: boolean): Promise<RegularDraw> {
   const slot = await connection.getSlot("confirmed");
 
@@ -99,6 +111,7 @@ export async function GET(req: NextRequest) {
     const lastBurnPaid = await getBurnTriggerPaid();
     const currentBurnLevel = burnStats?.completedBurnTriggers ?? 0;
     const burnForced = currentBurnLevel > lastBurnPaid;
+    const manualOverride = getManualOverride(req);
     let result: unknown;
     let debug: { payer: string; balanceLamports: number; reserveLamports: number; payoutLamports: number } | null =
       null;
@@ -119,7 +132,8 @@ export async function GET(req: NextRequest) {
       result = await runRegularDraw(payoutLamports, true);
       await setBurnTriggerPaid(currentBurnLevel);
     } else {
-      const shouldSplit = randomInt(0, 2) === 0;
+      const shouldSplit =
+        manualOverride === "team" ? true : manualOverride === "holder" ? false : randomInt(0, 2) === 0;
       if (shouldSplit) {
         const distributionTx = await runSplitDistribution(payoutLamports);
         // Intentionally do not log split-distribution cycles into draw history.

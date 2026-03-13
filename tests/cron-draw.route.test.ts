@@ -168,6 +168,51 @@ describe("cron draw route", () => {
     expect(mockAddDraw).not.toHaveBeenCalled();
   });
 
+  it("forces team distribution when manual mode=team is provided", async () => {
+    mockRunSplitDistribution.mockResolvedValue("split-signature");
+    mockRandomInt.mockReturnValue(1);
+
+    const { GET } = await import("@/app/api/cron-draw/route");
+    const req = new NextRequest(
+      "https://x/api/cron-draw?manual=manual-secret&mode=team"
+    );
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.result.type).toBe("split-distribution");
+    expect(mockRunSplitDistribution).toHaveBeenCalled();
+  });
+
+  it("forces holder payout when manual mode=holder is provided", async () => {
+    mockGetHolderSnapshotByOwner.mockResolvedValue([{ owner: "winner", amountRaw: "100" }]);
+    mockUploadSnapshotToGist.mockResolvedValue({
+      rawUrl: "https://gist/raw",
+      gistUrl: "https://gist/page"
+    });
+    mockRequestVrfRandomness.mockResolvedValue({
+      randomBytes: Buffer.from("01", "hex"),
+      randomHex: "01",
+      requestTx: "vrf-req",
+      fulfilledTx: "vrf-ful"
+    });
+    mockPickWeightedWinner.mockReturnValue({
+      winner: "11111111111111111111111111111111",
+      totalWeight: 100n
+    });
+    mockSubmitLegacyTransaction.mockResolvedValue("payout-signature");
+
+    const { GET } = await import("@/app/api/cron-draw/route");
+    const req = new NextRequest(
+      "https://x/api/cron-draw?manual=manual-secret&mode=holder"
+    );
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.result.type).toBe("regular");
+  });
+
   it("forces holder payout when burn trigger is pending", async () => {
     mockGetBurnStats.mockResolvedValue({ completedBurnTriggers: 3 });
     mockGetBurnTriggerPaid.mockResolvedValue(2);

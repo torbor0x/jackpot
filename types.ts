@@ -45,3 +45,9 @@ export type BurnStats = {
   tokensToNextTriggerRaw: string;
   nextTriggerAtRaw: string;
 };
+
+export type TeamDistributionRecord = {
+  tx: string;
+  timestamp: string;
+  note?: string;
+};

@@ -2,16 +2,17 @@ import DrawCard from "@/app/components/DrawCard";
 import NextDrawCountdown from "@/app/components/NextDrawCountdown";
 import TokenInfo from "@/app/components/TokenInfo";
 import AlonChatModal from "@/app/components/AlonChatModal";
-import { getDraws, getInitialDone } from "@/lib/kv";
+import { getDraws, getInitialDone, getTeamDistribution } from "@/lib/kv";
 import { getPublicInfo } from "@/lib/public-info";
 
 export const revalidate = 30;
 
 export default async function HomePage() {
-  const [draws, initialDone, publicInfo] = await Promise.all([
+  const [draws, initialDone, publicInfo, teamDistribution] = await Promise.all([
     getDraws(),
     getInitialDone(),
-    getPublicInfo()
+    getPublicInfo(),
+    getTeamDistribution()
   ]);
   const forceShowCountdown =
     process.env.FORCE_SHOW_COUNTDOWN === "true" || process.env.NODE_ENV !== "production";
@@ -113,6 +114,29 @@ export default async function HomePage() {
         </section>
 
         <section>
+          {teamDistribution ? (
+            <div className="card team-distribution-card">
+              <div className="draw-header-row">
+                <p className="pill">Team Distribution</p>
+                <p className="meta">
+                  {new Date(teamDistribution.timestamp).toLocaleString("en-US", {
+                    timeZone: "UTC"
+                  })}{" "}
+                  UTC
+                </p>
+              </div>
+              <p className="meta">
+                This round routed creator rewards to the team.{" "}
+                <a
+                  href={`https://solscan.io/tx/${teamDistribution.tx}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View transaction
+                </a>
+              </p>
+            </div>
+          ) : null}
           <div className="section-heading">
             <h2>Last 10 Draws</h2>
             <p className="meta">Newest first with full verification links.</p>

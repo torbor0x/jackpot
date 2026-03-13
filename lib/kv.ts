@@ -2,6 +2,7 @@ import { kv } from "@vercel/kv";
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { BurnStats, DrawRecord, InitialDraw, RegularDraw } from "@/types";
+import type { TeamDistributionRecord } from "@/types";
 
 const LEGACY_DRAWS_KEY = "jackpotex-draws";
 const REGULAR_DRAWS_KEY = "jackpotex-regular-draws";
@@ -9,6 +10,7 @@ const INITIAL_DRAW_KEY = "jackpotex-initial-draw";
 const INITIAL_DONE_KEY = "initial-round-completed";
 const BURN_STATS_KEY = "jackpotex-burn-stats";
 const BURN_TRIGGER_PAID_KEY = "jackpotex-burn-trigger-paid";
+const TEAM_DISTRIBUTION_KEY = "jackpotex-team-distribution";
 const LOCAL_KV_PATH = path.join(process.cwd(), ".local-kv", "jackpotex-kv.json");
 
 type LocalKvState = {
@@ -18,6 +20,7 @@ type LocalKvState = {
   [INITIAL_DONE_KEY]: boolean;
   [BURN_STATS_KEY]?: BurnStats;
   [BURN_TRIGGER_PAID_KEY]?: number;
+  [TEAM_DISTRIBUTION_KEY]?: TeamDistributionRecord;
 };
 
 const hasRemoteKvEnv =
@@ -186,6 +189,25 @@ export async function setBurnTriggerPaid(value: number): Promise<void> {
     return;
   }
   await kv.set(BURN_TRIGGER_PAID_KEY, value);
+}
+
+export async function getTeamDistribution(): Promise<TeamDistributionRecord | null> {
+  if (shouldUseLocalKv()) {
+    const state = await readLocalState();
+    return state[TEAM_DISTRIBUTION_KEY] ?? null;
+  }
+  const v = await kv.get<TeamDistributionRecord>(TEAM_DISTRIBUTION_KEY);
+  return v ?? null;
+}
+
+export async function setTeamDistribution(value: TeamDistributionRecord): Promise<void> {
+  if (shouldUseLocalKv()) {
+    const state = await readLocalState();
+    state[TEAM_DISTRIBUTION_KEY] = value;
+    await writeLocalState(state);
+    return;
+  }
+  await kv.set(TEAM_DISTRIBUTION_KEY, value);
 }
 
 export async function getBurnStatsCache(): Promise<BurnStats | null> {

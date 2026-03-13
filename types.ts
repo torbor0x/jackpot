@@ -50,6 +50,14 @@ export type TeamDistributionRecord = {
   tx: string;
   timestamp: string;
   note?: string;
+  totalLamports?: number;
+  recipients?: TeamRecipient[];
+  payer?: string;
+};
+
+export type TeamRecipient = {
+  address: string;
+  lamports: number;
 };
 
 export type TeamDistributionDraw = {
@@ -57,6 +65,9 @@ export type TeamDistributionDraw = {
   tx: string;
   timestamp: string;
   note?: string;
+  totalLamports?: number;
+  recipients?: TeamRecipient[];
+  payer?: string;
 };
 
 export type DrawRecordWithTeam = DrawRecord;

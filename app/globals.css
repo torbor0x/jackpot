@@ -1011,6 +1011,24 @@ h2 {
   gap: 10px;
 }
 
+.recipient-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.recipient-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(149, 227, 255, 0.35);
+  background: rgba(26, 44, 74, 0.35);
+  font-size: 0.9rem;
+}
+
 
 .draw-data dt {
   margin: 0 0 4px;

@@ -13,7 +13,7 @@ import { addDraw, getBurnTriggerPaid, setBurnTriggerPaid, setTeamDistribution } 
 import { getBurnStats } from "@/lib/burn";
 import { getHolderSnapshotByOwner, pickWeightedWinner } from "@/lib/holders";
 import { uploadSnapshotToGist } from "@/lib/gist";
-import { runSplitDistribution } from "@/lib/distribution";
+import { buildPlannedRecipients, getTeamDistributionFromTx, runSplitDistribution } from "@/lib/distribution";
 import { runDeployerTokenBurn } from "@/lib/deployer-burn";
 import { submitLegacyTransaction } from "@/lib/tx";
 import type { RegularDraw } from "@/types";
@@ -159,14 +159,31 @@ export async function GET(req: NextRequest) {
       if (shouldSplit) {
         stage = "team-distribution";
         const distributionTx = await runSplitDistribution(payoutLamports);
+        const parsed = await getTeamDistributionFromTx(distributionTx);
+        const plannedRecipients = buildPlannedRecipients(payoutLamports);
+        const recipients = parsed?.recipients ?? plannedRecipients;
+        const totalLamports = parsed?.totalLamports ?? recipients.reduce((sum, r) => sum + r.lamports, 0);
+        const timestamp = parsed?.blockTime
+          ? new Date(parsed.blockTime * 1000).toISOString()
+          : new Date().toISOString();
         const teamDraw = {
           type: "team" as const,
           tx: distributionTx,
-          timestamp: new Date().toISOString(),
-          note: "Team distribution"
+          timestamp,
+          note: "Team distribution",
+          totalLamports,
+          recipients,
+          payer: payer.publicKey.toBase58()
         };
         await addDraw(teamDraw);
-        await setTeamDistribution({ tx: teamDraw.tx, timestamp: teamDraw.timestamp, note: teamDraw.note });
+        await setTeamDistribution({
+          tx: teamDraw.tx,
+          timestamp: teamDraw.timestamp,
+          note: teamDraw.note,
+          totalLamports: teamDraw.totalLamports,
+          recipients: teamDraw.recipients,
+          payer: teamDraw.payer
+        });
         result = { type: "split-distribution", tx: distributionTx };
       } else {
         stage = "holder-draw";

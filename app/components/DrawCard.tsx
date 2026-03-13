@@ -36,18 +36,43 @@ export default function DrawCard({ draw }: { draw: DrawRecordWithTeam }) {
   }
 
   if (draw.type === "team") {
+    const totalLabel = draw.totalLamports ? `${toSol(draw.totalLamports)} SOL` : "n/a";
     return (
       <article className="card draw-card team-draw">
         <div className="draw-header-row">
           <p className="pill">Team Distribution</p>
           <p className="meta">{ts} UTC</p>
         </div>
-        <p className="meta">
-          This round routed creator rewards to the team.{" "}
+        <dl className="draw-data">
+          <div>
+            <dt>Total Distributed</dt>
+            <dd>{totalLabel}</dd>
+          </div>
+          {draw.payer ? (
+            <div>
+              <dt>Payer</dt>
+              <dd className="mono">{draw.payer}</dd>
+            </div>
+          ) : null}
+        </dl>
+        {draw.recipients && draw.recipients.length > 0 ? (
+          <div className="recipient-list">
+            <p className="meta">Recipients</p>
+            {draw.recipients.map((r) => (
+              <div className="recipient-row" key={r.address}>
+                <span className="mono">{r.address}</span>
+                <span>{toSol(r.lamports)} SOL</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="meta">Recipients not available.</p>
+        )}
+        <div className="link-row">
           <a href={`https://solscan.io/tx/${draw.tx}`} target="_blank" rel="noreferrer">
             View transaction
           </a>
-        </p>
+        </div>
       </article>
     );
   }

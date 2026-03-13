@@ -31,24 +31,24 @@ export async function claimCreatorFees(): Promise<string | null> {
     return null;
   }
 
-  const payload: Record<string, string> = {
+  const payload = new URLSearchParams({
     action: "collectCreatorFee",
     publicKey: payer.publicKey.toBase58(),
     priorityFee: priorityFeeSol()
-  };
+  });
   const pool = claimPool();
   if (pool) {
-    payload.pool = pool;
+    payload.set("pool", pool);
   }
   const mint = claimMint();
   if (mint) {
-    payload.mint = mint;
+    payload.set("mint", mint);
   }
 
   const res = await fetch(PUMPFUN_API, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: payload
   });
 
   if (!res.ok) {

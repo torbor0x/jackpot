@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { claimCreatorFees } from "@/lib/pumpfun";
+import { connection, payer } from "@/lib/solana";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,8 +23,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
+    const before = await connection.getBalance(payer.publicKey, "confirmed");
     const claimTx = await claimCreatorFees();
-    return NextResponse.json({ ok: true, claimTx }, { status: 200 });
+    const after = await connection.getBalance(payer.publicKey, "confirmed");
+    const claimedLamports = Math.max(0, after - before);
+
+    if (claimedLamports <= 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "No creator rewards claimed; check pool/mint or reward distribution wallet",
+          claimTx,
+          claimedLamports,
+          beforeLamports: before,
+          afterLamports: after
+        },
+        { status: 200 }
+      );
+    }
+
+    return NextResponse.json(
+      { ok: true, claimTx, claimedLamports, beforeLamports: before, afterLamports: after },
+      { status: 200 }
+    );
   } catch (err) {
     console.error("cron-claim error:", err);
     return NextResponse.json(

@@ -21,6 +21,11 @@ function claimPool(): string | null {
   return "pump";
 }
 
+function claimMint(): string | null {
+  const mint = (process.env.PUMPFUN_CLAIM_MINT ?? "").trim();
+  return mint.length > 0 ? mint : TOKEN_MINT.toBase58();
+}
+
 export async function claimCreatorFees(): Promise<string | null> {
   if (!claimEnabled()) {
     return null;
@@ -35,7 +40,10 @@ export async function claimCreatorFees(): Promise<string | null> {
   if (pool) {
     payload.pool = pool;
   }
-  // PumpPortal claims creator fees all at once; mint is optional and can be omitted.
+  const mint = claimMint();
+  if (mint) {
+    payload.mint = mint;
+  }
 
   const res = await fetch(PUMPFUN_API, {
     method: "POST",

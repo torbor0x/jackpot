@@ -1,11 +1,17 @@
-import { VersionedTransaction } from "@solana/web3.js";
-import { TOKEN_MINT, payer } from "@/lib/solana";
-import { submitVersionedTransaction } from "@/lib/tx";
+import { OnlinePumpSdk } from "@pump-fun/pump-sdk";
+import { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
+import { TOKEN_MINT, connection, payer } from "@/lib/solana";
+import { submitLegacyTransaction, submitVersionedTransaction } from "@/lib/tx";
 
 const PUMPFUN_API = "https://pumpportal.fun/api/trade-local";
+const DEFAULT_PROVIDER = "sdk";
 
 function claimEnabled(): boolean {
   return (process.env.PUMPFUN_CLAIM_ENABLED ?? "true").toLowerCase() === "true";
+}
+
+function claimProvider(): string {
+  return (process.env.PUMPFUN_CLAIM_PROVIDER ?? DEFAULT_PROVIDER).toLowerCase();
 }
 
 function priorityFeeSol(): string {
@@ -26,11 +32,34 @@ function claimMint(): string | null {
   return mint.length > 0 ? mint : TOKEN_MINT.toBase58();
 }
 
-export async function claimCreatorFees(): Promise<string | null> {
-  if (!claimEnabled()) {
-    return null;
+function claimMode(): "collect" | "distribute" {
+  const mode = (process.env.PUMPFUN_CLAIM_MODE ?? "collect").toLowerCase();
+  return mode === "distribute" ? "distribute" : "collect";
+}
+
+async function claimViaSdk(): Promise<string> {
+  const sdk = new OnlinePumpSdk(connection);
+  const mode = claimMode();
+
+  if (mode === "distribute") {
+    const mint = new PublicKey(claimMint() ?? TOKEN_MINT.toBase58());
+    const result = await sdk.buildDistributeCreatorFeesInstructions(mint);
+    if (!result.instructions.length) {
+      throw new Error("No creator fee distribution instructions returned");
+    }
+    const tx = new Transaction().add(...result.instructions);
+    return submitLegacyTransaction({ tx, signers: [payer], label: "pumpfun-distribute" });
   }
 
+  const instructions = await sdk.collectCoinCreatorFeeInstructions(payer.publicKey, payer.publicKey);
+  if (!instructions.length) {
+    throw new Error("No creator fee instructions returned");
+  }
+  const tx = new Transaction().add(...instructions);
+  return submitLegacyTransaction({ tx, signers: [payer], label: "pumpfun-claim" });
+}
+
+async function claimViaPortal(): Promise<string> {
   const payload = new URLSearchParams({
     action: "collectCreatorFee",
     publicKey: payer.publicKey.toBase58(),
@@ -62,4 +91,11 @@ export async function claimCreatorFees(): Promise<string | null> {
 
   const sig = await submitVersionedTransaction({ tx, label: "pumpfun-claim" });
   return sig;
+}
+
+export async function claimCreatorFees(): Promise<string | null> {
+  if (!claimEnabled()) {
+    return null;
+  }
+  return claimProvider() === "portal" ? claimViaPortal() : claimViaSdk();
 }

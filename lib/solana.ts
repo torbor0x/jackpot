@@ -78,14 +78,7 @@ export async function requestVrfRandomness(maxWaitMs = 60_000): Promise<{
     let fulfilledTx = requestTx;
     let randomBytes: Buffer | null = null;
 
-    if (typeof orao.waitFulfilled === "function") {
-      const fulfilled = await orao.waitFulfilled(seed, maxWaitMs);
-      fulfilledTx = sigFromUnknown(fulfilled) || fulfilledTx;
-      const r = fulfilled?.randomness ?? fulfilled?.fulfilledRandomness;
-      if (r) {
-        randomBytes = Buffer.from(r);
-      }
-    }
+    // Avoid ORAO waitFulfilled to prevent WS-only signatureSubscribe dependency.
 
     while (!randomBytes && Date.now() - start < maxWaitMs) {
       const state = await orao.getRandomness?.(seed);

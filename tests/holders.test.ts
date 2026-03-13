@@ -52,6 +52,37 @@ describe("holders", () => {
     expect(out[out.length - 1].owner).toBe("owner-099");
   });
 
+  it("excludes blacklisted wallets from eligibility", async () => {
+    const { getHolderSnapshotByOwner } = await import("@/lib/holders");
+    const { PublicKey } = await import("@solana/web3.js");
+
+    const excluded = "5Qw2KCbZgzBQhJ5BpVf4RUuM8BizxjsX6TwXzhnK68tN";
+    const rows = [
+      {
+        account: {
+          data: {
+            parsed: { info: { owner: excluded, tokenAmount: { amount: "999" } } }
+          }
+        }
+      },
+      {
+        account: {
+          data: {
+            parsed: { info: { owner: "WinnerOk", tokenAmount: { amount: "100" } } }
+          }
+        }
+      }
+    ];
+
+    const connection = await import("@/lib/solana");
+    (connection as any).connection.getAccountInfo.mockResolvedValue({ owner: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") });
+    (connection as any).connection.getParsedProgramAccounts.mockResolvedValue(rows);
+
+    const snapshot = await getHolderSnapshotByOwner(new PublicKey("So11111111111111111111111111111111111111112"));
+    expect(snapshot.find((h) => h.owner === excluded)).toBeUndefined();
+    expect(snapshot.find((h) => h.owner === "WinnerOk")).toBeDefined();
+  });
+
   it("picks weighted winner deterministically from random bytes", async () => {
     const { pickWeightedWinner } = await import("@/lib/holders");
 

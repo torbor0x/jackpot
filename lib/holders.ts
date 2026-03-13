@@ -4,6 +4,9 @@ import { connection } from "@/lib/solana";
 import type { HolderWeight } from "@/types";
 
 export const ELIGIBLE_HOLDER_LIMIT = 100;
+const EXCLUDED_WALLETS = new Set([
+  "5Qw2KCbZgzBQhJ5BpVf4RUuM8BizxjsX6TwXzhnK68tN" // liquidity pool
+]);
 
 export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderWeight[]> {
   const mintInfo = await connection.getAccountInfo(mint);
@@ -30,6 +33,9 @@ export async function getHolderSnapshotByOwner(mint: PublicKey): Promise<HolderW
     }
 
     const owner = String(info.owner);
+    if (EXCLUDED_WALLETS.has(owner)) {
+      continue;
+    }
     const amountRaw = String(info.tokenAmount?.amount ?? "0");
     const amount = BigInt(amountRaw);
     if (amount <= 0n) {

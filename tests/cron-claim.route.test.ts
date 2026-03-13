@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 const mockClaimCreatorFees = vi.fn();
 const mockGetBalance = vi.fn();
+const mockGetCreatorRewardsBalanceLamports = vi.fn();
 
 vi.mock("@/lib/solana", () => ({
   connection: { getBalance: mockGetBalance },
@@ -10,7 +11,8 @@ vi.mock("@/lib/solana", () => ({
 }));
 
 vi.mock("@/lib/pumpfun", () => ({
-  claimCreatorFees: mockClaimCreatorFees
+  claimCreatorFees: mockClaimCreatorFees,
+  getCreatorRewardsBalanceLamports: mockGetCreatorRewardsBalanceLamports
 }));
 
 describe("cron claim route", () => {
@@ -27,6 +29,9 @@ describe("cron claim route", () => {
     process.env.CRON_SECRET = "cron-secret";
     process.env.MANUAL_TRIGGER_SECRET = "manual-secret";
     mockClaimCreatorFees.mockResolvedValue("claim-signature");
+    mockGetCreatorRewardsBalanceLamports
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n);
     mockGetBalance.mockResolvedValueOnce(1000).mockResolvedValueOnce(2000);
     const { GET } = await import("@/app/api/cron-claim/route");
     const req = new NextRequest("https://x/api/cron-claim?secret=cron-secret");
@@ -38,7 +43,9 @@ describe("cron claim route", () => {
       claimTx: "claim-signature",
       claimedLamports: 1000,
       beforeLamports: 1000,
-      afterLamports: 2000
+      afterLamports: 2000,
+      vaultBeforeLamports: "0",
+      vaultAfterLamports: "0"
     });
   });
 
@@ -46,6 +53,9 @@ describe("cron claim route", () => {
     process.env.CRON_SECRET = "cron-secret";
     process.env.MANUAL_TRIGGER_SECRET = "manual-secret";
     mockClaimCreatorFees.mockResolvedValue("claim-signature");
+    mockGetCreatorRewardsBalanceLamports
+      .mockResolvedValueOnce(123n)
+      .mockResolvedValueOnce(123n);
     mockGetBalance.mockResolvedValueOnce(500).mockResolvedValueOnce(500);
     const { GET } = await import("@/app/api/cron-claim/route");
     const req = new NextRequest("https://x/api/cron-claim?manual=manual-secret");
@@ -58,7 +68,9 @@ describe("cron claim route", () => {
       claimTx: "claim-signature",
       claimedLamports: 0,
       beforeLamports: 500,
-      afterLamports: 500
+      afterLamports: 500,
+      vaultBeforeLamports: "123",
+      vaultAfterLamports: "123"
     });
   });
 });

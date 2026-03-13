@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { claimCreatorFees } from "@/lib/pumpfun";
+import { claimCreatorFees, getCreatorRewardsBalanceLamports } from "@/lib/pumpfun";
 import { connection, payer } from "@/lib/solana";
 
 export const runtime = "nodejs";
@@ -23,9 +23,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
+    const vaultBefore = await getCreatorRewardsBalanceLamports();
     const before = await connection.getBalance(payer.publicKey, "confirmed");
     const claimTx = await claimCreatorFees();
     const after = await connection.getBalance(payer.publicKey, "confirmed");
+    const vaultAfter = await getCreatorRewardsBalanceLamports();
     const claimedLamports = Math.max(0, after - before);
 
     if (claimedLamports <= 0) {
@@ -36,14 +38,24 @@ export async function GET(req: NextRequest) {
           claimTx,
           claimedLamports,
           beforeLamports: before,
-          afterLamports: after
+          afterLamports: after,
+          vaultBeforeLamports: vaultBefore.toString(),
+          vaultAfterLamports: vaultAfter.toString()
         },
         { status: 200 }
       );
     }
 
     return NextResponse.json(
-      { ok: true, claimTx, claimedLamports, beforeLamports: before, afterLamports: after },
+      {
+        ok: true,
+        claimTx,
+        claimedLamports,
+        beforeLamports: before,
+        afterLamports: after,
+        vaultBeforeLamports: vaultBefore.toString(),
+        vaultAfterLamports: vaultAfter.toString()
+      },
       { status: 200 }
     );
   } catch (err) {

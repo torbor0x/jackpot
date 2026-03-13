@@ -99,3 +99,9 @@ export async function claimCreatorFees(): Promise<string | null> {
   }
   return claimProvider() === "portal" ? claimViaPortal() : claimViaSdk();
 }
+
+export async function getCreatorRewardsBalanceLamports(): Promise<bigint> {
+  const sdk = new OnlinePumpSdk(connection);
+  const balance = await sdk.getCreatorVaultBalanceBothPrograms(payer.publicKey);
+  return BigInt(balance.toString());
+}

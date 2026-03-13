@@ -1,0 +1,22 @@
+name: JackpotEx Draw Cron
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger draw endpoint
+        env:
+          BASE_URL: ${{ secrets.JACKPOTEX_BASE_URL }}
+          CRON_SECRET: ${{ secrets.JACKPOTEX_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "Missing JACKPOTEX_BASE_URL or JACKPOTEX_CRON_SECRET secrets."
+            exit 1
+          fi
+          curl -fsS "${BASE_URL}/api/cron-draw?secret=${CRON_SECRET}"

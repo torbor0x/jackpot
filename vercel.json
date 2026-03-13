@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron-claim?secret=$CRON_SECRET",
+      "schedule": "*/15 * * * *"
+    },
+    {
       "path": "/api/cron-draw?secret=$CRON_SECRET",
       "schedule": "0 * * * *"
     }

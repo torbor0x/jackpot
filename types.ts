@@ -28,7 +28,7 @@ export type RegularDraw = {
   randomValueHex: string;
 };
 
-export type DrawRecord = InitialDraw | RegularDraw;
+export type DrawRecord = InitialDraw | RegularDraw | TeamDistributionDraw;
 
 export type BurnStats = {
   updatedAt: string;
@@ -59,4 +59,4 @@ export type TeamDistributionDraw = {
   note?: string;
 };
 
-export type DrawRecordWithTeam = DrawRecord | TeamDistributionDraw;
+export type DrawRecordWithTeam = DrawRecord;

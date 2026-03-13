@@ -1,7 +1,7 @@
 import { kv } from "@vercel/kv";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { BurnStats, DrawRecord, InitialDraw, RegularDraw } from "@/types";
+import type { BurnStats, DrawRecord, InitialDraw, RegularDraw, TeamDistributionDraw } from "@/types";
 import type { TeamDistributionRecord } from "@/types";
 
 const LEGACY_DRAWS_KEY = "jackpotex-draws";
@@ -14,7 +14,7 @@ const TEAM_DISTRIBUTION_KEY = "jackpotex-team-distribution";
 const LOCAL_KV_PATH = path.join(process.cwd(), ".local-kv", "jackpotex-kv.json");
 
 type LocalKvState = {
-  [REGULAR_DRAWS_KEY]: RegularDraw[];
+  [REGULAR_DRAWS_KEY]: (RegularDraw | TeamDistributionDraw)[];
   [INITIAL_DRAW_KEY]: InitialDraw | null;
   [LEGACY_DRAWS_KEY]?: DrawRecord[];
   [INITIAL_DONE_KEY]: boolean;
@@ -37,9 +37,12 @@ function shouldUseLocalKv(): boolean {
   return !hasRemoteKvEnv || process.env.NODE_ENV !== "production";
 }
 
-function splitDraws(draws: DrawRecord[]): { initial: InitialDraw | null; regular: RegularDraw[] } {
+function splitDraws(draws: DrawRecord[]): {
+  initial: InitialDraw | null;
+  regular: (RegularDraw | TeamDistributionDraw)[];
+} {
   let initial: InitialDraw | null = null;
-  const regular: RegularDraw[] = [];
+  const regular: (RegularDraw | TeamDistributionDraw)[] = [];
 
   for (const d of draws) {
     if (d.type === "initial") {
@@ -48,13 +51,16 @@ function splitDraws(draws: DrawRecord[]): { initial: InitialDraw | null; regular
       }
       continue;
     }
-    regular.push(d);
+    regular.push(d as RegularDraw | TeamDistributionDraw);
   }
 
   return { initial, regular };
 }
 
-function combineDraws(initial: InitialDraw | null, regular: RegularDraw[]): DrawRecord[] {
+function combineDraws(
+  initial: InitialDraw | null,
+  regular: (RegularDraw | TeamDistributionDraw)[]
+): DrawRecord[] {
   const nextRegular = regular.slice(0, initial ? 9 : 10);
   return initial ? [initial, ...nextRegular] : nextRegular;
 }
@@ -73,7 +79,10 @@ async function readLocalState(): Promise<LocalKvState> {
         ? (initialRaw as InitialDraw)
         : null;
     const regular = Array.isArray(regularRaw)
-      ? regularRaw.filter((d): d is RegularDraw => Boolean(d && d.type === "regular"))
+      ? regularRaw.filter(
+          (d): d is RegularDraw | TeamDistributionDraw =>
+            Boolean(d && (d.type === "regular" || d.type === "team"))
+        )
       : [];
     const legacy = Array.isArray(legacyRaw) ? legacyRaw : [];
 
@@ -127,21 +136,34 @@ export async function setInitialDone(value: boolean): Promise<void> {
 export async function getDraws(): Promise<DrawRecord[]> {
   if (shouldUseLocalKv()) {
     const state = await readLocalState();
-    return combineDraws(state[INITIAL_DRAW_KEY], state[REGULAR_DRAWS_KEY]);
+    const combined = combineDraws(state[INITIAL_DRAW_KEY], state[REGULAR_DRAWS_KEY]);
+    const team = state[TEAM_DISTRIBUTION_KEY];
+    if (team) {
+      combined.push({ type: "team", ...team });
+    }
+    return combined;
   }
   const [initial, regular] = await Promise.all([
     kv.get<InitialDraw>(INITIAL_DRAW_KEY),
-    kv.get<RegularDraw[]>(REGULAR_DRAWS_KEY)
+    kv.get<(RegularDraw | TeamDistributionDraw)[]>(REGULAR_DRAWS_KEY)
   ]);
 
   const validInitial =
     initial && typeof initial === "object" && initial.type === "initial" ? initial : null;
   const validRegular = Array.isArray(regular)
-    ? regular.filter((d): d is RegularDraw => Boolean(d && d.type === "regular"))
+    ? regular.filter(
+        (d): d is RegularDraw | TeamDistributionDraw =>
+          Boolean(d && (d.type === "regular" || d.type === "team"))
+      )
     : [];
 
   if (validInitial || validRegular.length > 0) {
-    return combineDraws(validInitial, validRegular);
+    const combined = combineDraws(validInitial, validRegular);
+    const team = await kv.get<TeamDistributionRecord>(TEAM_DISTRIBUTION_KEY);
+    if (team) {
+      combined.push({ type: "team", ...team });
+    }
+    return combined;
   }
 
   const legacy = await kv.get<DrawRecord[]>(LEGACY_DRAWS_KEY);
@@ -167,7 +189,7 @@ export async function addDraw(draw: DrawRecord): Promise<void> {
     await kv.set(INITIAL_DRAW_KEY, draw);
     return;
   }
-  const current = await kv.get<RegularDraw[]>(REGULAR_DRAWS_KEY);
+  const current = await kv.get<(RegularDraw | TeamDistributionDraw)[]>(REGULAR_DRAWS_KEY);
   const next = [draw, ...(Array.isArray(current) ? current : [])].slice(0, 9);
   await kv.set(REGULAR_DRAWS_KEY, next);
 }

@@ -9,7 +9,7 @@ import {
   requestVrfRandomness
 } from "@/lib/solana";
 import { toSol } from "@/lib/format";
-import { addDraw, getBurnTriggerPaid, setBurnTriggerPaid } from "@/lib/kv";
+import { addDraw, getBurnTriggerPaid, setBurnTriggerPaid, setTeamDistribution } from "@/lib/kv";
 import { getBurnStats } from "@/lib/burn";
 import { getHolderSnapshotByOwner, pickWeightedWinner } from "@/lib/holders";
 import { uploadSnapshotToGist } from "@/lib/gist";
@@ -159,7 +159,14 @@ export async function GET(req: NextRequest) {
       if (shouldSplit) {
         stage = "team-distribution";
         const distributionTx = await runSplitDistribution(payoutLamports);
-        // Intentionally do not log split-distribution cycles into draw history.
+        const teamDraw = {
+          type: "team" as const,
+          tx: distributionTx,
+          timestamp: new Date().toISOString(),
+          note: "Team distribution"
+        };
+        await addDraw(teamDraw);
+        await setTeamDistribution({ tx: teamDraw.tx, timestamp: teamDraw.timestamp, note: teamDraw.note });
         result = { type: "split-distribution", tx: distributionTx };
       } else {
         stage = "holder-draw";

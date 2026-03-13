@@ -2,23 +2,19 @@ import DrawCard from "@/app/components/DrawCard";
 import NextDrawCountdown from "@/app/components/NextDrawCountdown";
 import TokenInfo from "@/app/components/TokenInfo";
 import AlonChatModal from "@/app/components/AlonChatModal";
-import { getDraws, getInitialDone, getTeamDistribution } from "@/lib/kv";
+import { getDraws, getInitialDone } from "@/lib/kv";
 import { getPublicInfo } from "@/lib/public-info";
 import type { DrawRecordWithTeam } from "@/types";
 
 export const revalidate = 30;
 
 export default async function HomePage() {
-  const [draws, initialDone, publicInfo, teamDistribution] = await Promise.all([
+  const [draws, initialDone, publicInfo] = await Promise.all([
     getDraws(),
     getInitialDone(),
-    getPublicInfo(),
-    getTeamDistribution()
+    getPublicInfo()
   ]);
   const allDraws: DrawRecordWithTeam[] = [...draws];
-  if (teamDistribution) {
-    allDraws.push({ type: "team", ...teamDistribution });
-  }
   allDraws.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   const displayDraws = allDraws.slice(0, 10);
   const forceShowCountdown =

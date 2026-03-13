@@ -14,7 +14,11 @@ function priorityFeeSol(): string {
 
 function claimPool(): string | null {
   const pool = (process.env.PUMPFUN_CLAIM_POOL ?? "").trim();
-  return pool.length > 0 ? pool : null;
+  if (pool.length > 0) {
+    return pool;
+  }
+  // Default to "pump" per PumpPortal docs if not explicitly set.
+  return "pump";
 }
 
 export async function claimCreatorFees(): Promise<string | null> {
@@ -22,21 +26,21 @@ export async function claimCreatorFees(): Promise<string | null> {
     return null;
   }
 
-  const body = new URLSearchParams({
+  const payload: Record<string, string> = {
     action: "collectCreatorFee",
     publicKey: payer.publicKey.toBase58(),
-    mint: TOKEN_MINT.toBase58(),
     priorityFee: priorityFeeSol()
-  });
+  };
   const pool = claimPool();
   if (pool) {
-    body.set("pool", pool);
+    payload.pool = pool;
   }
+  // PumpPortal claims creator fees all at once; mint is optional and can be omitted.
 
   const res = await fetch(PUMPFUN_API, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {

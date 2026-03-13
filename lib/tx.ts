@@ -1,9 +1,4 @@
-import {
-  sendAndConfirmTransaction,
-  Transaction,
-  type Signer,
-  type VersionedTransaction
-} from "@solana/web3.js";
+import { Transaction, type Signer, type VersionedTransaction } from "@solana/web3.js";
 import { connection } from "@/lib/solana";
 
 function simulatedSig(label: string): string {
@@ -13,6 +8,22 @@ function simulatedSig(label: string): string {
 
 function simulateEnabled(): boolean {
   return process.env.SIMULATE_TRANSACTIONS === "true";
+}
+
+async function waitForSignature(sig: string, timeoutMs = 60_000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const status = await connection.getSignatureStatuses([sig], { searchTransactionHistory: true });
+    const info = status.value[0];
+    if (info?.err) {
+      throw new Error(`Transaction failed: ${JSON.stringify(info.err)}`);
+    }
+    if (info?.confirmationStatus === "confirmed" || info?.confirmationStatus === "finalized") {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error(`Transaction confirmation timeout: ${sig}`);
 }
 
 export async function submitLegacyTransaction(params: {
@@ -28,9 +39,20 @@ export async function submitLegacyTransaction(params: {
     return simulatedSig(params.label);
   }
 
-  return sendAndConfirmTransaction(connection, params.tx, params.signers, {
-    commitment: "confirmed"
+  if (!params.tx.recentBlockhash) {
+    const latest = await connection.getLatestBlockhash("confirmed");
+    params.tx.recentBlockhash = latest.blockhash;
+  }
+  if (!params.tx.feePayer) {
+    params.tx.feePayer = params.signers[0]?.publicKey;
+  }
+  params.tx.sign(...params.signers);
+  const sig = await connection.sendRawTransaction(params.tx.serialize(), {
+    skipPreflight: false,
+    maxRetries: 3
   });
+  await waitForSignature(sig);
+  return sig;
 }
 
 export async function submitVersionedTransaction(params: {
@@ -49,6 +71,6 @@ export async function submitVersionedTransaction(params: {
     skipPreflight: false,
     maxRetries: 3
   });
-  await connection.confirmTransaction(sig, "confirmed");
+  await waitForSignature(sig);
   return sig;
 }

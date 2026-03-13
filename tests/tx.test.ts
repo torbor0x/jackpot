@@ -4,13 +4,15 @@ import { createMemoInstruction } from "@solana/spl-memo";
 
 const simulateTransaction = vi.fn();
 const sendRawTransaction = vi.fn();
-const confirmTransaction = vi.fn();
+const getLatestBlockhash = vi.fn();
+const getSignatureStatuses = vi.fn();
 
 vi.mock("@/lib/solana", () => ({
   connection: {
     simulateTransaction,
     sendRawTransaction,
-    confirmTransaction
+    getLatestBlockhash,
+    getSignatureStatuses
   }
 }));
 
@@ -18,7 +20,8 @@ describe("transaction execution", () => {
   beforeEach(() => {
     simulateTransaction.mockReset();
     sendRawTransaction.mockReset();
-    confirmTransaction.mockReset();
+    getLatestBlockhash.mockReset();
+    getSignatureStatuses.mockReset();
   });
 
   it("simulates legacy transaction when SIMULATE_TRANSACTIONS=true", async () => {

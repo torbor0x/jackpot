@@ -14,6 +14,7 @@ const mockRandomInt = vi.fn();
 const mockGetBurnStats = vi.fn();
 const mockGetBurnTriggerPaid = vi.fn();
 const mockSetBurnTriggerPaid = vi.fn();
+const mockClaimCreatorFees = vi.fn();
 const mockGetBalance = vi.fn();
 const mockGetAccountInfo = vi.fn();
 const mockGetSlot = vi.fn();
@@ -54,6 +55,10 @@ vi.mock("@/lib/deployer-burn", () => ({
   runDeployerTokenBurn: mockRunDeployerTokenBurn
 }));
 
+vi.mock("@/lib/pumpfun", () => ({
+  claimCreatorFees: mockClaimCreatorFees
+}));
+
 vi.mock("node:crypto", () => ({
   randomInt: mockRandomInt
 }));
@@ -87,6 +92,7 @@ describe("cron draw route", () => {
     mockGetBurnStats.mockReset();
     mockGetBurnTriggerPaid.mockReset();
     mockSetBurnTriggerPaid.mockReset();
+    mockClaimCreatorFees.mockReset();
     mockGetBalance.mockReset();
     mockGetAccountInfo.mockReset();
     mockGetSlot.mockReset();
@@ -94,6 +100,7 @@ describe("cron draw route", () => {
     mockRunDeployerTokenBurn.mockResolvedValue(null);
     mockGetBurnStats.mockResolvedValue({ completedBurnTriggers: 0 });
     mockGetBurnTriggerPaid.mockResolvedValue(0);
+    mockClaimCreatorFees.mockResolvedValue("claim-signature");
     mockGetBalance.mockResolvedValue(200000000);
     mockGetAccountInfo.mockResolvedValue({});
     mockGetSlot.mockResolvedValue(123);
@@ -140,6 +147,7 @@ describe("cron draw route", () => {
     expect(body.ok).toBe(true);
     expect(body.result.type).toBe("regular");
     expect(body.burn).toBeNull();
+    expect(body.claimTx).toBe("claim-signature");
     expect(mockRunDeployerTokenBurn).toHaveBeenCalledOnce();
     expect(mockAddDraw).toHaveBeenCalled();
     expect(mockSubmitLegacyTransaction).toHaveBeenCalledWith(
@@ -160,6 +168,7 @@ describe("cron draw route", () => {
     expect(res.status).toBe(200);
     expect(body).toMatchObject({
       ok: true,
+      claimTx: "claim-signature",
       burn: null,
       result: { type: "split-distribution", tx: "split-signature" }
     });

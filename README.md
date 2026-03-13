@@ -85,6 +85,11 @@ Typical Vercel production:
 - `SPLIT_DISTRIBUTION_LAMPORTS` controls total lamports split evenly across those 3 wallets.
 - Split branch is intentionally not recorded in draw history.
 
+## Pumpfun Creator Fee Claim
+
+- `PUMPFUN_CLAIM_ENABLED` toggles creator fee claim before each cycle.
+- `PUMPFUN_PRIORITY_FEE_SOL` sets the priority fee for the claim transaction.
+
 ## Deployer Burn Reserve
 
 - `DEPLOYER_TOKEN_RESERVE_UI` keeps this many tokens in the deployer ATA (UI amount, not raw).

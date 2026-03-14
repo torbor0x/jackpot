@@ -778,6 +778,22 @@ h1 {
   text-shadow: 0 0 20px rgba(78, 238, 204, 0.42);
 }
 
+.draw-balance-hype {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b7fff3;
+  text-shadow: 0 0 18px rgba(78, 238, 204, 0.35);
+}
+
+.draw-balance-sub {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .draw-balance-box.is-low .draw-balance-value {
   color: #ffb1b1;
   text-shadow: 0 0 18px rgba(255, 116, 116, 0.55);

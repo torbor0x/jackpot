@@ -38,7 +38,7 @@ export default function NextDrawCountdown({ currentDrawSol, payerPubkey, burnSta
   const label = useMemo(() => formatRemaining(remainingMs), [remainingMs]);
   const drawValue =
     currentDrawSol === null ? "Unavailable" : `${currentDrawSol.toFixed(4)} SOL`;
-  const isLowSol = currentDrawSol !== null && currentDrawSol < 0.1;
+  const isLowSol = currentDrawSol !== null && currentDrawSol < 1;
   const isTimerZero = remainingMs <= 1000;
   const walletUrl = payerPubkey ? `https://solscan.io/account/${payerPubkey}` : null;
   const brandedPrefix = "JackpotEx";
@@ -87,6 +87,8 @@ export default function NextDrawCountdown({ currentDrawSol, payerPubkey, burnSta
         </div>
         <div className={`draw-balance-box${isLowSol ? " is-low" : ""}`}>
           <p className="countdown-label">Next Draw Balance</p>
+          <p className="draw-balance-hype">MEGA Jackpot Loading</p>
+          <p className="draw-balance-sub">Jackpot accumulating until 1 SOL in pot</p>
           <p className="draw-balance-value">{drawValue}</p>
         </div>
       </div>

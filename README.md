@@ -165,4 +165,4 @@ The script re-sorts by owner (same as backend), recomputes weighted selection, a
 - API route is protected by secret query params.
 - Keep payer wallet minimally funded and rotate leaked secrets immediately.
 - Set `RESERVE_LAMPORTS_FOR_FEES` to `0.1 SOL` to retain fees.
-- Set `MIN_DISTRIBUTION_LAMPORTS` to `0.1 SOL` to prevent draws when balance is too low.
+- Set `MIN_DISTRIBUTION_LAMPORTS` to `1 SOL` to prevent draws when balance is too low.

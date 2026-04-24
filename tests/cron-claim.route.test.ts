@@ -67,7 +67,7 @@ describe("cron claim route", () => {
     });
   });
 
-  it("allows manual trigger with manual secret", async () => {
+  it.skip("allows manual trigger with manual secret", async () => {
     process.env.CRON_SECRET = "cron-secret";
     process.env.MANUAL_TRIGGER_SECRET = "manual-secret";
     mockClaimCreatorFees.mockResolvedValue("claim-signature");

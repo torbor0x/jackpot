@@ -1,154 +1,194 @@
 # JackpotEx
 
-Provably fair weighted random holder draw website for a specific SPL token.
+Provably fair weighted random holder draw website for SPL tokens on Solana.
+
+## Overview
+
+JackpotEx is an automated jackpot system that runs hourly draws where token holders can win SOL prizes. The system is fully verifiable through on-chain data and public snapshots.
+
+**Key Features**:
+- Provably fair weighted random selection based on token holdings
+- ORAO VRF for verifiable randomness
+- Hourly automated draws via cron
+- 50/50 split between holder draws and team distributions
+- Pumpfun creator fee claiming
+- Token burn tracking with forced jackpot triggers
+- Complete verification through public Gists and on-chain memos
+
+## Documentation
+
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete system architecture, data schemas, and core logic
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Vercel deployment guide with KV setup
+- **[LOCAL_SETUP.md](./LOCAL_SETUP.md)** - Local development and testing guide
 
 ## Stack
 
-- Next.js 16 (App Router, TypeScript, RSC)
-- Solana Web3 + SPL Token + SPL Memo
-- ORAO VRF
-- Jupiter v6 (`@jup-ag/api`)
-- GitHub Gist (Octokit)
-- Vercel KV
+- **Next.js 16** (App Router, TypeScript, RSC)
+- **Solana Web3.js** + SPL Token + SPL Memo
+- **ORAO VRF** - Verifiable randomness
+- **Jupiter v6** (`@jup-ag/api`) - DEX integration
+- **GitHub Gist** (Octokit) - Public snapshot storage
+- **Vercel KV** - Persistent storage
+- **Pumpfun SDK** - Creator fee claiming
 
-## What It Does
+## Quick Start
 
-- Informational homepage only (no trigger buttons).
-- Shows token/project info and last 10 completed draws.
- - Draws run immediately with hourly randomized payouts (no initial buyback).
- - Hourly possible draws from holder snapshot
-  - 50/50 branch:
-    - Weighted holder draw, or
-    - Silent split distribution to team wallets (`Torbor`, `Peachie`, `Jesse`) in a single transaction
-  - ORAO VRF randomness
-  - SOL prize transfer with proof memo (uses full payer balance minus reserve)
-  - Stores draw result in KV
-  - Snapshot stored in public Gist for verification
-  - Burn tracker refreshed every 30 minutes (cached) for forced-jackpot progress
+### Prerequisites
 
-## Setup
+- Node.js 18+
+- npm 9+
+- Solana wallet with SOL
+- RPC provider (Alchemy, Helius, QuickNode)
+- GitHub personal access token (gist scope)
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Copy environment file:
-   ```bash
-   cp .env.example .env
-   ```
-3. Fill required env values in `.env`.
-4. Run dev server:
-   ```bash
-   npm run dev
-   ```
-
-## Tests
-
-Run full test suite:
+### Installation
 
 ```bash
-npm test
+# Clone repository
+git clone https://github.com/yourusername/jackpot.git
+cd jackpot
+
+# Install dependencies
+npm install
+
+# Copy environment template
+cp .env.example .env
+
+# Edit .env with your configuration
+# See LOCAL_SETUP.md for detailed setup instructions
 ```
 
-The tests mock network + Solana side effects and validate flow logic without sending on-chain transactions.
+### Running Locally
 
-## KV Modes (Local Dev vs Vercel)
+```bash
+# Development mode
+npm run dev
+
+# Production build
+npm run build
+npm start
+```
+
+Visit `http://localhost:3000` to see the application.
+
+## Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run live integration tests (requires real configuration)
+npm run test:live
+```
+
+The test suite mocks network and Solana interactions to validate flow logic without executing real transactions.
+
+## How It Works
+
+### Draw Process (Hourly)
+
+1. **Deployer Burn**: Burns excess tokens from deployer wallet
+2. **Burn Check**: Checks if burn trigger level increased (forces holder draw)
+3. **Balance Check**: Verifies sufficient SOL for payout
+4. **Branch Decision**:
+   - If burn trigger increased: Guaranteed holder draw
+   - Otherwise: 50/50 random between team distribution or holder draw
+5. **Holder Draw** (if selected):
+   - Fetches top 100 token holders by balance
+   - Uploads snapshot to public Gist
+   - Requests randomness from ORAO VRF
+   - Selects weighted winner using snapshot + randomness
+   - Transfers SOL with verification memo
+6. **Team Distribution** (if selected):
+   - Splits SOL evenly among 3 team wallets
+   - Executes single transaction
+
+### Claim Process (Every 15 minutes)
+
+1. Checks Pumpfun creator fee vault balance
+2. Claims accumulated fees via SDK or Portal API
+3. Distributes or collects based on configuration
+
+### Verification
+
+Every draw is fully verifiable:
+- Snapshot stored in public Gist
+- VRF transactions on-chain
+- Payout transaction includes verification memo
+- Run `npm run verify:draw` to verify any draw
+
+## Configuration
+
+### KV Storage Modes
 
 `lib/kv.ts` supports three modes via `KV_MODE`:
 
-- `KV_MODE=auto` (default): uses local file storage in non-production or when KV env vars are missing; uses Vercel KV when available in production.
-- `KV_MODE=local`: always use local file storage.
-- `KV_MODE=remote`: always use Vercel KV (fails if KV env vars are not configured).
+- `KV_MODE=auto` (default): Uses local file storage in development, Vercel KV in production
+- `KV_MODE=local`: Always uses local file storage (`.local-kv/jackpotex-kv.json`)
+- `KV_MODE=remote`: Always uses Vercel KV (requires `KV_REST_API_URL` and `KV_REST_API_TOKEN`)
 
-Local file storage path:
-- `.local-kv/jackpotex-kv.json`
+### Key Environment Variables
 
-Typical local development:
-- Keep `KV_MODE=auto` or set `KV_MODE=local` in `.env`.
+See `.env.example` for complete list. Important variables:
 
-Typical Vercel production:
-- Keep `KV_MODE=auto` and configure Upstash/Vercel KV integration env vars.
+- `MAINNET_ENDPOINT`: Solana RPC HTTP endpoint (required)
+- `MAINNET_WSS_ENDPOINT`: Solana RPC WebSocket endpoint (required for VRF)
+- `PAYER_SECRET_KEY`: Base58-encoded private key (required)
+- `TOKEN_MINT`: SPL token mint address (required)
+- `PRIZE_LAMPORTS`: Prize amount in lamports (required)
+- `RESERVE_LAMPORTS_FOR_FEES`: SOL to reserve for transaction fees (required)
+- `MIN_DISTRIBUTION_LAMPORTS`: Minimum balance for draws (default: 1 SOL)
+- `CRON_SECRET`: Protects cron endpoints (required)
+- `MANUAL_TRIGGER_SECRET`: Protects manual trigger (required)
+- `GITHUB_TOKEN`: GitHub API for Gists (required)
+- `VRF_REQUIRED`: Enforce VRF randomness (default: true)
+- `SIMULATE_TRANSACTIONS`: Simulation mode only (default: false)
+- `PUMPFUN_CLAIM_ENABLED`: Enable pumpfun claiming (default: true)
 
-## Countdown Toggle
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete environment variable reference.
 
-- `FORCE_SHOW_COUNTDOWN=true` shows the `Next chance of jackpot` timer in all environments.
-- Set `FORCE_SHOW_COUNTDOWN=false` if you want the timer hidden.
+## Deployment
 
-## Transaction Simulation Mode
+### Live Example
 
-- `SIMULATE_TRANSACTIONS=true` enables simulation-only mode for on-chain transaction execution paths.
-- In simulation mode, the app simulates transactions and returns simulated signatures instead of broadcasting.
+A live deployment is available at: **https://www.jackpotex.fun/**
 
-## Split Distribution Config
+### Vercel Deployment
 
-- `TEAM_WALLET_TORBOR`, `TEAM_WALLET_PEACHIE`, `TEAM_WALLET_JESSE` configure backend-only split recipients.
-- `SPLIT_DISTRIBUTION_LAMPORTS` controls total lamports split evenly across those 3 wallets.
-- Split branch is intentionally not recorded in draw history.
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete Vercel deployment guide including:
 
-## Pumpfun Creator Fee Claim
+- Vercel project setup
+- Environment variable configuration
+- Vercel KV integration
+- Cron job configuration
+- GitHub Actions alternative
+- Security best practices
+- Troubleshooting
 
-- `PUMPFUN_CLAIM_ENABLED` toggles creator fee claim before each cycle.
-- `PUMPFUN_PRIORITY_FEE_SOL` sets the priority fee for the claim transaction.
-- `PUMPFUN_CLAIM_POOL` sets the pool for creator fee claims (`pump`, `pump-amm`, `auto`, or `meteora-dbc`).
-- `PUMPFUN_CLAIM_MINT` optionally overrides which mint to claim; defaults to `TOKEN_MINT`.
-- `PUMPFUN_CLAIM_PROVIDER` selects `sdk` (default) or `portal`.
-- `PUMPFUN_CLAIM_MODE` selects `collect` (default) or `distribute` (fee sharing).
-- `PUMPFUN_CREATOR_PUBLIC_KEY` optionally overrides the creator wallet used for claims.
-
-## VRF Settings
-
-- `VRF_REQUIRED=true` enforces ORAO VRF; set to `false` to allow fallback randomness if VRF fails.
-- `MAINNET_WSS_ENDPOINT` should be a WebSocket endpoint for your RPC (required for ORAO VRF fulfillment on providers that don’t support WS on the HTTP URL).
-
-## Deployer Burn Reserve
-
-- `DEPLOYER_TOKEN_RESERVE_UI` keeps this many tokens in the deployer ATA (UI amount, not raw).
-- Any deployer token balance above this reserve is burned on each cron cycle.
-
-## Burn Tracker Config
-
-- Burned amount is calculated as `1,000,000,000 - current mint supply` (mint-decimal aware).
-- Burn trigger ladder: first at `10,000`, then increments grow by `+50,000` each trigger
-  (`10k`, `60k`, `160k`, `310k`, ...).
-
-## Deploy On Vercel
-
-1. Push repo to GitHub.
-2. Import repo in Vercel.
-3. Add environment variables from `.env.example` in Vercel Project Settings.
-4. Deploy.
-
-`vercel.json` already includes hourly cron:
-- Schedule: `0 * * * *`
-- Target: `/api/cron-draw?secret=$CRON_SECRET`
-
-## Manual Trigger (dev)
+### Manual Trigger (Development)
 
 ```bash
-curl "https://your-domain.com/api/cron-draw?manual=YOUR_MANUAL_TRIGGER_SECRET"
-```
+# Test draw endpoint
+curl "https://your-domain.com/api/cron-draw?manual=YOUR_MANUAL_TRIGGER_SECRET&mode=holder"
 
-## Cron Claim (every 15 minutes)
-
-```text
-*/15 * * * * /api/cron-claim?secret=$CRON_SECRET
-```
-
-## Manual Claim (dev)
-
-```bash
+# Test claim endpoint
 curl "https://your-domain.com/api/cron-claim?manual=YOUR_MANUAL_TRIGGER_SECRET"
 ```
 
-## Draw Verification
+## Verification
 
-### Option A: Verify from draw JSON record
+Every draw is fully verifiable through public data:
+
+### Verify from Draw Record
 
 ```bash
 npm run verify:draw -- --draw ./regular-draw.json --expectedWinner <winner-pubkey>
 ```
 
-### Option B: Verify from snapshot + random hex
+### Verify from Snapshot + Random Hex
 
 ```bash
 npm run verify:draw -- \
@@ -157,12 +197,38 @@ npm run verify:draw -- \
   --expectedWinner <winner-pubkey>
 ```
 
-The script re-sorts by owner (same as backend), recomputes weighted selection, and checks winner.
+The verification script re-sorts by owner (same as backend), recomputes weighted selection, and confirms the winner.
 
-## Security Notes
+## Security
 
-- Never expose `PAYER_SECRET_KEY`, `CRON_SECRET`, `MANUAL_TRIGGER_SECRET`, `GITHUB_TOKEN` in client code.
-- API route is protected by secret query params.
-- Keep payer wallet minimally funded and rotate leaked secrets immediately.
-- Set `RESERVE_LAMPORTS_FOR_FEES` to `0.1 SOL` to retain fees.
-- Set `MIN_DISTRIBUTION_LAMPORTS` to `1 SOL` to prevent draws when balance is too low.
+**Critical Security Notes**:
+
+- Never expose `PAYER_SECRET_KEY`, `CRON_SECRET`, `MANUAL_TRIGGER_SECRET`, `GITHUB_TOKEN` in client code
+- API routes are protected by secret query parameters
+- Keep payer wallet minimally funded and rotate leaked secrets immediately
+- Use a dedicated wallet for payouts (not your main wallet)
+- Set `RESERVE_LAMPORTS_FOR_FEES` to retain SOL for transaction fees
+- Set `MIN_DISTRIBUTION_LAMPORTS` to prevent draws when balance is too low
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed security considerations.
+
+## Known Vulnerabilities
+
+The following security vulnerabilities exist in the dependency tree (transitive Solana packages):
+
+- **bigint-buffer**: Buffer overflow vulnerability (via @solana/web3.js)
+- **uuid**: Missing buffer bounds check (via rpc-websockets)
+
+These are in deep dependencies of the Solana ecosystem. Monitor for updates from the Solana and @solana/web3.js teams. See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
+
+## License
+
+[Specify your license here]
+
+## Contributing
+
+[Specify contribution guidelines here]
+
+## Support
+
+For issues, questions, or contributions, please open an issue on GitHub.

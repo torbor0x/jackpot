@@ -16,15 +16,31 @@ export const MAINNET_WSS_ENDPOINT = process.env.MAINNET_WSS_ENDPOINT ?? "";
 export const TOKEN_MINT = new PublicKey(required("TOKEN_MINT"));
 export const TOKEN_NAME = required("TOKEN_NAME");
 export const JACKPOT_WEBSITE_URL = required("JACKPOT_WEBSITE_URL");
-export const TEAM_WALLET_TORBOR = new PublicKey(
-  process.env.TEAM_WALLET_TORBOR ?? "CvMJMaHtGA1acs17bPQbhPxFim97HyLTXaZQHckCToRb"
-);
-export const TEAM_WALLET_PEACHIE = new PublicKey(
-  process.env.TEAM_WALLET_PEACHIE ?? "AJ3uhNTZAQETZPGsxZZit7xPerioZNpuTeRmqGiERie1"
-);
-export const TEAM_WALLET_JESSE = new PublicKey(
-  process.env.TEAM_WALLET_JESSE ?? "7YpRbrJzjykgaEbWMrRrZASdEeieYEyoV3FB2MGvEXbR"
-);
+export function getTeamWallets(): PublicKey[] {
+  const envValue = process.env.TEAM_WALLETS;
+  if (!envValue) {
+    // Default example with 3 team members
+    return [
+      new PublicKey("CvMJMaHtGA1acs17bPQbhPxFim97HyLTXaZQHckCToRb"),
+      new PublicKey("AJ3uhNTZAQETZPGsxZZit7xPerioZNpuTeRmqGiERie1"),
+      new PublicKey("7YpRbrJzjykgaEbWMrRrZASdDd4eieYEyoV3FB2MGvEXbR")
+    ];
+  }
+  try {
+    const parsed = JSON.parse(envValue);
+    if (!Array.isArray(parsed)) {
+      throw new Error("TEAM_WALLETS must be a JSON array");
+    }
+    if (parsed.length === 0) {
+      throw new Error("TEAM_WALLETS must have at least one wallet");
+    }
+    return parsed.map((addr) => new PublicKey(addr));
+  } catch (err) {
+    throw new Error(`Invalid TEAM_WALLETS format: ${err instanceof Error ? err.message : "unknown error"}`);
+  }
+}
+
+export const TEAM_WALLETS = getTeamWallets();
 
 export const PRIZE_LAMPORTS = Number(required("PRIZE_LAMPORTS"));
 export const RESERVE_LAMPORTS_FOR_FEES = Number(required("RESERVE_LAMPORTS_FOR_FEES"));

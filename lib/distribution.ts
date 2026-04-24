@@ -1,9 +1,7 @@
 import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
-import { TEAM_WALLET_JESSE, TEAM_WALLET_PEACHIE, TEAM_WALLET_TORBOR, connection, payer } from "@/lib/solana";
+import { TEAM_WALLETS, connection, payer } from "@/lib/solana";
 import { submitLegacyTransaction } from "@/lib/tx";
 import type { TeamRecipient } from "@/types";
-
-export const TEAM_WALLETS: PublicKey[] = [TEAM_WALLET_TORBOR, TEAM_WALLET_PEACHIE, TEAM_WALLET_JESSE];
 
 export function splitLamportsEvenly(totalLamports: number, walletCount: number): number[] {
   if (walletCount <= 0) {

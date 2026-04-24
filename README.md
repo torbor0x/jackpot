@@ -223,11 +223,11 @@ These are in deep dependencies of the Solana ecosystem. Monitor for updates from
 
 ## License
 
-[Specify your license here]
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
 ## Contributing
 
-[Specify contribution guidelines here]
+Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to contribute to this project.
 
 ## Support
 
